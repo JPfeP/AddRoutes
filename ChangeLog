@@ -1,0 +1,130 @@
+v0.26
+    -Blemote: categories support
+    -Sending with try/except for system routes
+    -Blender automatic IP send configuration with Blemote
+    -New type of permanent routes (system)
+    -Routes can have a python evaluated path + context
+    -Refactoring of the route layout
+    -Preferences settings for app.timers and overflow protection
+    -Name change for "AddRoutes"
+
+v0.25
+    -new specific type of engine for Blemote
+    -OSC: fix regression with string messages
+
+v0.24
+    -first support for Blemote
+
+v0.23
+    -routes can now be copied
+    -new feature to categorize routes and manipulate them
+    -OSC: multi route sending works
+    -OSC: new mode of actualization (numpy available as np in expression)
+    -fix regression bug while rendering a midifile
+    -protection against error while changing scene and sending data
+
+v0.22
+    -new options for keframes insertion
+    -fix a regression with keyframe insertion (update_dict is now needed for theses new and old options)
+    -new mode of actualization (expression) for MIDI
+    -MIDI: rework of the "rescale" feature
+    -MIDI: new envelope feature
+    -MIDI: new offset option for midifile conversion and playing
+    -MIDI: better resolution and improved speed for midifile conversion
+
+v0.21
+    -optimisations in keyframe insert code
+    -optimisations in actualisation code (OSC/MIDI)
+    -happy fix for keyframe insertion of nested properties
+    -MIDI: new option for debug input
+
+v0.20
+    OSC: fix for TouchOSC sending empty payload while switching tabs
+    MIDI: all calls to actualise() now in try/except blocks
+    MIDI: new option to counteract blender extrapolation on notes while converting midifile
+
+v0.19
+    OSC: update of "oscpy", and edit of server.py, for Windows users (reconnect bug)
+
+v0.18
+    -OSC: fix for the server using CPU abnormally in alert mode
+    -New radians to degrees feature
+    -MIDI: set/read Enum properties with integers
+
+v0.17
+    -OSC: fix regression with single properties
+    -OSC: fix errors with keyframe insertion and multi routes
+    -OSC: can now receive string for enum prop
+    -OSC: add a hint in the UI for expected 'n' value
+
+v0.16
+    -Improvements for Blemote support
+    -OSC: new Pick operator similar to AddOSC
+    -OSC: Debug incoming messages in console
+    -OSC: fix for starting automatically on a new project + server retry
+    -OSC: multi routes input
+
+v0.15
+    -Blemote config saved/restored properly
+    -remove actualisation in OSC.py outside try/catch
+    -new flag for OSC : use_array
+    -OSC: full Vector send/receive
+    -OSC Config panel appears in red if a pbm occurs
+    -OSC/Blemote: fix server not releasing unused connection
+    -World Shader Node Tree support by menu route creation
+
+v0.14
+    -OSC output is back
+    -bug fixes (cpu hog, midiin False, unregister error)
+
+v0.13
+    -OSC input is back
+    -change for "oscpy" instead of "python-osc"
+
+v0.12
+    -first implementation of MIDI out
+
+v0.11
+    -new sync out options
+    -don't use anymore bpy as global namespace
+
+v0.10
+    -bug fix with VAR in datapath while recording/converting
+    -midifile playing now includes the last item of its array
+
+v0.9
+    -multi routes !
+
+v0.8
+    -User workaround to handle note-off as note-on with vel 0
+    -Another attempt to avoid crashes and weird issues
+
+v0.7
+    -Midifile convert to frame
+    -Midifile contribute while playing/rendering
+    -init bug workaround (Struct RNA missing)
+    -fine tuning of the loop timer
+
+v0.6
+    -handling properly scene changes
+    -adoption of app.timers
+    -better context management
+    -SPP getting less crashy
+
+v0.5
+    -update of the pythonosc module to 1.7
+    -fix bug while unregistering
+
+v0.4
+    -fix for shader nodes properties
+    -OSC and Blemote Config Panels
+    -OSC engine working
+
+v0.3
+    -contextual menu entry to add a route automatically
+
+v0.2
+    -bug fixes
+
+v0.1
+    -initial release
