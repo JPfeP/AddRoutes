@@ -26,9 +26,12 @@ import sys
 import time
 from collections import defaultdict
 
+import os
+
 import bpy
 from bpy.utils import register_class, unregister_class
 from bpy.app.handlers import persistent
+from bpy_extras.io_utils import ImportHelper
 import functools
 
 import rtmidi
@@ -44,7 +47,7 @@ import g_vars
 from data import generate_dict
 from data import upd_settings_sub
 from data import yield_all_routes
-
+from data import build_idx
 
 MIDI_list_enum = []
 midi_in_list = []
@@ -90,7 +93,7 @@ def get_ctx_scene():
         #get_scn = bpy.data.scenes[scn.name]
         if get_scn != scn:
             scn = get_scn
-
+            build_idx()
             #bpy.ops.addroutes.gendict()
             generate_dict(None, bpy.data.window_managers[0].windows[0])
             send_clock(scn, scn)
@@ -494,16 +497,41 @@ class AddRoutes_RefreshDevices(bpy.types.Operator):
         return{'FINISHED'}
 
 
+class AddRoutes_Open_Midifile(bpy.types.Operator, ImportHelper):
+    """Select Midifile"""
+    bl_idname = "addroutes.openmidifile"
+    bl_label = "Open"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+    filename: bpy.props.StringProperty()
+    filter_glob: bpy.props.StringProperty(
+        default="*.mid",
+        options={'HIDDEN'})
+
+    def execute(self, context):
+        filename, extension = os.path.splitext(self.filepath)
+        context.scene.midifile = bpy.path.relpath(self.filepath)
+        bpy.ops.addroutes.midifile_parse()
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        self.filename = ""
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 class AddRoutes_Midifile_Convert(bpy.types.Operator):
-    '''Convert a Midifile to F-curves'''
+    '''Convert Midifile to F-curves'''
     bl_idname = "addroutes.midifile"
-    bl_label = "AddRoutes Convert a Midifile"
+    bl_label = "Convert Midifile"
 
     def execute(self, context):
         global midifile_conv
         midifile_conv = True
         try:
-            current_file = bpy.path.abspath('//'+context.scene.midifile)
+            if context.scene.midifile[0] != "/":
+                context.scene.midifile = "//"+context.scene.midifile
+            current_file = bpy.path.abspath(context.scene.midifile)
             mid = MidiFile(current_file)
         except:
             midifile_conv = False
@@ -562,14 +590,16 @@ class AddRoutes_Midifile_Convert(bpy.types.Operator):
 
 
 class AddRoutes_Midifile_Parse(bpy.types.Operator):
-    '''Parse a Midifile'''
+    '''Reload and Parse Midifile'''
     bl_idname = "addroutes.midifile_parse"
-    bl_label = "Play a Midifile"
+    bl_label = "Reload and Parse Midifile"
 
     def execute(self, context):
         global midifile_array
         try:
-            current_file = bpy.path.abspath('//' + context.scene.midifile)
+            if context.scene.midifile[0] != "/":
+                context.scene.midifile = "//"+context.scene.midifile
+            current_file = bpy.path.abspath(context.scene.midifile)
             mid = MidiFile(current_file)
         except:
             self.report({'INFO'}, "Midifile Error")
@@ -893,6 +923,7 @@ def addroutes_midi_off(scene):
 cls = (
     AddRoutes_RefreshDevices,
     AddRoutes_Midifile_Convert,
+    AddRoutes_Open_Midifile,
     AddRoutes_Midifile_Parse,
     AddRoutes_Midi_Play,
     AddRoutes_Midi_Pause,

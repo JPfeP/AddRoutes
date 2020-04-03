@@ -35,7 +35,7 @@ stored = None
 auto_port_out = None
 auto_udp_out = None
 
-upd_cnt = 0
+upd_cnt = -1
 blem_cnt = 0
 
 
@@ -88,7 +88,7 @@ def actua_bl():
                         ref.keyframe_insert(data_path=prop, **item['ks_params'])
 
             except:
-                print("Error while sending, improper Blemote route parameters with: " + repr(bl_item))
+                print("Error while receiving, improper Blemote route parameters with: " + repr(bl_item))
 
     return prefs.refresh/1000
 

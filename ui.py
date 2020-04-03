@@ -23,7 +23,10 @@ import bpy
 from bpy.utils import register_class, unregister_class
 from bpy.types import Panel
 from bpy.types import Menu
+from bpy_extras.io_utils import ImportHelper
 from data import generate_dict
+import json
+
 import g_vars
 
 
@@ -67,12 +70,14 @@ class VIEW3D_PT_AddRoutes_MIDI_Config(Panel):
         box = layout.box()
         box.label(text="Midifile settings:")
         row = box.row()
-        row.prop(context.scene, 'midifile', text='File name')
-        row.prop(context.scene, 'mf_extraspoil', text='')
-        box.operator('addroutes.midifile_parse', text='Reload')
+        row.prop(context.scene, 'midifile', text='')
+        row.operator('addroutes.openmidifile', text='', icon='FILEBROWSER')
+        row.operator('addroutes.midifile_parse', text='', icon='FILE_REFRESH')
+
         row = box.row(align=True)
         row.operator("addroutes.midifile", text='Convert midifile')
         row.prop(context.scene, 'mf_offset')
+        box.prop(context.scene, 'mf_extraspoil', text='No Extrapolation')
         box.prop(context.scene, 'mf_render', text='Contribute while rendering')
         box.prop(context.scene, 'mf_play', text='Contribute while playing (Blender bug !)')
 
@@ -152,6 +157,10 @@ class VIEW3D_PT_AddRoutes_Tools(Panel):
         row.operator('addroutes.renamecat')
         row.operator('addroutes.copycat')
 
+        row = col.row(align=True)
+        row.operator('addroutes.catimport', icon='FILEBROWSER')
+        row.operator('addroutes.catexport', icon='FILEBROWSER')
+
         col = layout.column()
         col.label(text='Routes sorting:')
         row = col.row(align=True)
@@ -166,7 +175,7 @@ class VIEW3D_PT_AddRoutes_Tools(Panel):
 
         row = layout.row()
         n_events = str(context.window_manager.n_overflow)
-        row.label(text= 'Overflow events: '+ n_events)
+        row.label(text='Overflow events: '+ n_events)
 
 
 def show_routes(context, layout, item, i, route_type):
@@ -412,7 +421,6 @@ class VIEW3D_PT_AddR_Sys_Routes(Panel):
     bl_region_type = "UI"
     bl_idname = "VIEW3D_PT_AddR_system_routes"
 
-
     def draw(self, context):
         prefs = bpy.context.preferences.addons['AddRoutes'].preferences
         layout = self.layout
@@ -433,7 +441,7 @@ def addaroute(collection):
 
 
 class AddRoutes_AddProp(bpy.types.Operator):
-    '''Add a route'''
+    """Add a route"""
     bl_idname = "addroutes.addprop"
     bl_label = "AddRoutes Add Route"
     bl_options = {'UNDO'}
@@ -445,7 +453,7 @@ class AddRoutes_AddProp(bpy.types.Operator):
 
 
 class AddR_AddSysRoutes(bpy.types.Operator):
-    '''Add a system route'''
+    """Add a system route"""
     bl_idname = "addroutes.addsysroute"
     bl_label = "AddRoutes Add Route"
     bl_options = {'UNDO'}
@@ -458,7 +466,7 @@ class AddR_AddSysRoutes(bpy.types.Operator):
 
 
 class AddRoutes_RemoveProp(bpy.types.Operator):
-    '''Remove route'''
+    """Remove route"""
     bl_idname = "addroutes.removeprop"
     bl_label = "AddRoutes Remove Route"
     bl_options = {'UNDO'}
@@ -472,7 +480,7 @@ class AddRoutes_RemoveProp(bpy.types.Operator):
 
 
 class AddRoutes_RemoveSysRoute(bpy.types.Operator):
-    '''Remove sys route'''
+    """Remove sys route"""
     bl_idname = "addroutes.remsysroute"
     bl_label = "AddRoutes Remove Sys Route"
     bl_options = {'UNDO'}
@@ -487,7 +495,7 @@ class AddRoutes_RemoveSysRoute(bpy.types.Operator):
 
 
 class AddRoutes_CopyProp(bpy.types.Operator):
-    '''Copy a route'''
+    """Copy a route"""
     bl_idname = "addroutes.copyprop"
     bl_label = "Copy Route"
     bl_options = {'UNDO'}
@@ -498,7 +506,10 @@ class AddRoutes_CopyProp(bpy.types.Operator):
         my_item = addaroute(context.scene.MOM_Items)
         for k, v in context.scene.MOM_Items[self.n].items():
             if k != 'perma_rank':
-                my_item[k] = v
+                try:
+                    my_item[k] = v
+                except:
+                    pass
         generate_dict(self, context)
         return{'FINISHED'}
 
@@ -519,7 +530,7 @@ def list_scenes(self, context):
 
 
 class AddRoutes_CopySysProp(bpy.types.Operator):
-    '''Copy a route'''
+    """Copy a route"""
     bl_idname = "addroutes.copysysprop"
     bl_label = "Copy System Route"
     bl_options = {'UNDO'}
@@ -531,13 +542,16 @@ class AddRoutes_CopySysProp(bpy.types.Operator):
         my_item = addaroute(prefs.AddR_System_Routes)
         for k, v in prefs.AddR_System_Routes[self.n].items():
             if k != 'perma_rank':
-                my_item[k] = v
+                try:
+                    my_item[k] = v
+                except:
+                    pass
         generate_dict(self, context)
         return{'FINISHED'}
 
 
 class AddRoutes_CopyCategory(bpy.types.Operator):
-    '''Copy a whole category to another scene'''
+    """Copy a whole category to another scene"""
     bl_idname = "addroutes.copycat"
     bl_label = "Copy to a scene"
     bl_property = "enumsce"
@@ -562,15 +576,18 @@ class AddRoutes_CopyCategory(bpy.types.Operator):
             if item.category == context.scene.MOM_catenum:
                 my_item = addaroute(sce.MOM_Items)
                 for k, v in item.items():
-                    if k != 'category':
-                        my_item[k] = v
-                    else:
-                        my_item[k] = sce.MOM_categories[context.scene.MOM_catenum].rank
+                    try:
+                        if k != 'category':
+                            my_item[k] = v
+                        else:
+                            my_item[k] = sce.MOM_categories[context.scene.MOM_catenum].rank
+                    except:
+                        pass
         return{'FINISHED'}
 
 
 class AddRoutes_CreateCategory(bpy.types.Operator):
-    '''Create a category'''
+    """Create a category"""
     bl_idname = "addroutes.addcat"
     bl_label = "Create a category"
 
@@ -589,7 +606,7 @@ class AddRoutes_CreateCategory(bpy.types.Operator):
 
 
 class AddRoutes_RenameCategory(bpy.types.Operator):
-    '''Rename a category'''
+    """Rename a category"""
     bl_idname = "addroutes.renamecat"
     bl_label = "Rename"
 
@@ -611,7 +628,7 @@ class AddRoutes_RenameCategory(bpy.types.Operator):
 
 
 class AddRoutes_RemoveCategory(bpy.types.Operator):
-    '''Remove a category'''
+    """Remove a category"""
     bl_idname = "addroutes.removecat"
     bl_label = "Remove a category"
 
@@ -627,15 +644,126 @@ class AddRoutes_RemoveCategory(bpy.types.Operator):
         return{'FINISHED'}
 
 
+def keep_good_keys(dir_list):
+    bad = ('__annotations__', '__dict__', '__doc__', '__module__', '__weakref__', 'bl_rna', 'rna_type',  'upd_max', 'upd_min',  'double', 'int', 'name')
+    for bad_item in bad:
+        try:
+            dir_list.remove(bad_item)
+        except:
+            #print("Export, not found :", bad_item)
+            pass
+    return dir_list
+
+
+def catexport(sce):
+    catroutes = {}
+    route = {}
+    for i, item in enumerate(sce.MOM_Items):
+        if item.category == sce.MOM_catenum:
+            pair = {}
+            k_list = keep_good_keys(dir(item))
+            for k in k_list:
+                if k == 'id':
+                    pair[k] = item.id[item.id_type].name
+                elif k == 'perma_rank':
+                    continue
+                else:
+                    try:
+                        pair[k] = getattr(item, k)
+                    except:
+                        pass
+            route[i] = pair
+    catroutes[sce.MOM_catenum] = route
+
+    return json.dumps(catroutes)
+
+
+class AddRoutes_Category_Export(bpy.types.Operator):
+    """Export category to a file in JSON format"""
+    bl_idname = "addroutes.catexport"
+    bl_label = "Export"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+    filename: bpy.props.StringProperty()
+
+    def execute(self, context):
+        file = open(self.filepath, 'w')
+        file.write(catexport(context.scene))
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        self.filename = context.scene.MOM_catenum+'.routes'
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
+def catimport(scene, file):
+    table = json.load(file)
+    for catroutes in table.items():
+        # check if the category need to be created
+        cat = catroutes[0]
+        routes = catroutes[1]
+        if scene.MOM_categories.get(cat) is None:
+            new = scene.MOM_categories.add()
+            new.name = cat
+            new.rank = highest_rank(scene)
+
+        for route in routes.items():
+            item = scene.MOM_Items.add()
+            i = route[0]
+            t = route[1]
+            ID = ""
+            for k, v in t.items():
+
+                if k == "id":
+                    ID = v
+
+                elif k == "id_type":
+                    setattr(item, k, v)
+                    ref = getattr(bpy.data, item.id_type)
+                    try:
+                        item.id[item.id_type] = ref[ID]
+                    except:
+                        pass
+
+                else:
+                    setattr(item, k, v)
+            item.category = cat
+        #updaterank()
+
+
+class AddRoutes_Category_Import(bpy.types.Operator, ImportHelper):
+    """Import category to a file in JSON format"""
+    bl_idname = "addroutes.catimport"
+    bl_label = "Import"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+    filename: bpy.props.StringProperty()
+    filter_glob: bpy.props.StringProperty(
+        default="*.routes",
+        options={'HIDDEN'})
+
+    def execute(self, context):
+        file = open(self.filepath, 'r')
+        catimport(context.scene, file)
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        self.filename = ""
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 # This is for the contextual menu to create route from a property
 class WM_OT_button_context_addroutes(bpy.types.Operator):
     """Create a route"""
     bl_idname = "wm.button_context_addroutes"
     bl_label = "Create a realtime route"
 
-    @classmethod
-    def poll(cls, context):
-        return context.active_object is not None
+    # @classmethod
+    # def poll(cls, context):
+    #      print (context.active_operator)
+    #      return context.active_object is not None
 
     def execute(self, context):
         value1 = getattr(context, "button_pointer", None)
@@ -664,7 +792,7 @@ class WM_OT_button_context_addroutes(bpy.types.Operator):
                     setattr(my_item.id, id_type, id)
                     my_item.data_path = data_path
                 except:
-                    pass
+                    self.report({'INFO'}, "Error !")
                 # For worlds
                 try:
                     id_type = 'worlds'
@@ -678,16 +806,18 @@ class WM_OT_button_context_addroutes(bpy.types.Operator):
                     setattr(my_item.id, id_type, id)
                     my_item.data_path = data_path
                 except:
-                    pass
+                    self.report({'INFO'}, "Error !")
 
             else:
-                id_type = repr(id).split(".")[2].split('[')[0]
-                data_path = value1.path_from_id(prop)
+                try:
+                    id_type = repr(id).split(".")[2].split('[')[0]
+                    data_path = value1.path_from_id(prop)
 
-                my_item.id_type = id_type
-                setattr(my_item.id, id_type, id)
-                my_item.data_path = data_path
-
+                    my_item.id_type = id_type
+                    setattr(my_item.id, id_type, id)
+                    my_item.data_path = data_path
+                except:
+                    self.report({'INFO'}, "Error !")
 
         return {'FINISHED'}
 
@@ -701,7 +831,7 @@ class WM_MT_button_context(Menu):
 
 
 class AddRoutes_OscPick(bpy.types.Operator):
-    '''Pick last event OSC address'''
+    """Pick last event OSC address"""
     bl_idname = "addroutes.osc_pick"
     bl_label = "AddRoutes OSC event pick address"
     bl_options = {'UNDO'}
@@ -731,6 +861,8 @@ cls = ( AddRoutes_AddProp,
         AddRoutes_CopyCategory,
         AddRoutes_RemoveCategory,
         AddRoutes_RenameCategory,
+        AddRoutes_Category_Export,
+        AddRoutes_Category_Import,
         AddRoutes_OscPick,
         VIEW3D_PT_AddRoutes_MIDI_Config,
         VIEW3D_PT_AddRoutes_OSC_Config,

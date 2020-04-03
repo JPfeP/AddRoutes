@@ -1,3 +1,12 @@
+
+v0.27
+    -Blemote: bug fix to handle scene change
+    -Blemote: now respond when launched after Blender
+    -MIDI: rework of the Load/Parse operator to present a file browser
+    -Tools: Import/Export of categories
+    -Tools: some try/catch blocks to handle deprecated properties
+    -Removing of the improper polling function for "Create realtime route"
+
 v0.26
     -Blemote: categories support
     -Sending with try/except for system routes
