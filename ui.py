@@ -114,6 +114,24 @@ class VIEW3D_PT_AddRoutes_OSC_Config(Panel):
         row3 = col3.row(align=True)
         row3.prop(bpy.context.window_manager, 'addroutes_osc_debug', text='Debug (!)')
 
+        col = layout.column()
+        col.separator()
+        col.label(text="File conversion:")
+        row = col.row()
+        row.prop(context.scene, 'addroutes_qlistfile', text='')
+        row.operator('addroutes.qlistopen', text='', icon='FILEBROWSER')
+        row = col.row()
+        row.operator('addroutes.qlistconvert')
+        row.prop(context.scene, 'addroutes_qf_offset')
+
+        col.separator()
+        row = col.row()
+        row.prop(context.scene, 'addroutes_fcapfile', text='')
+        row.operator('addroutes.fcapopen', text='', icon='FILEBROWSER')
+        row = col.row()
+        row.operator('addroutes.fcapconvert')
+        row.prop(context.scene, 'addroutes_fcap_offset')
+
 
 class VIEW3D_PT_AddRoutes_Blemote_Config(Panel):
     bl_category = "AddR Config"
@@ -337,7 +355,6 @@ def show_routes(context, layout, item, i, route_type):
                 row.label(text='(?)')
             else:
                 row.label(text='(1)')
-
 
     row = box.row()
 

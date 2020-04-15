@@ -22,7 +22,7 @@
 bl_info = {
     "name": "AddRoutes",
     "author": "JPfeP",
-    "version": (0, 27),
+    "version": (0, 28),
     "blender": (2, 80, 0),
     "location": "",
     "description": "Realtime MIDI, OSC protocols in the viewport",

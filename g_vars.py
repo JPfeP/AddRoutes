@@ -37,7 +37,6 @@ eval_prop = None
 highest_rank = 0
 
 
-
 def evalprop (toeval, withctx):
     for window in bpy.data.window_managers[0].windows:
         screen = window.screen

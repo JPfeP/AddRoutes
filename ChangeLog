@@ -1,7 +1,10 @@
+v0.28
+    -Puredata Qlist text file conversion
+    -FaceCap text file conversion
 
 v0.27
     -Blemote: bug fix to handle scene change
-    -Blemote: now respond when launched after Blender
+    -Blemote: now responds when launched after Blender
     -MIDI: rework of the Load/Parse operator to present a file browser
     -Tools: Import/Export of categories
     -Tools: some try/catch blocks to handle deprecated properties
