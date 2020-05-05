@@ -70,7 +70,6 @@ def set_props(item, bl_item, val):
         setattr(ref, prop, result2)
 
     # insert keyframe
-    print(qf_frame)
     if bl_item.record and (bpy.data.screens[0].is_animation_playing or qf_frame is not None):
         if bl_item.is_array and (bl_item.use_array is False):
             index = bl_item.array
