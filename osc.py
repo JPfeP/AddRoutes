@@ -41,7 +41,7 @@ osc_server = None
 osc_in_ok = False
 
 #for qfile conversion
-qf_frame = None
+qf_frame = {}
 
 
 def set_props(item, bl_item, val):
@@ -70,7 +70,7 @@ def set_props(item, bl_item, val):
         setattr(ref, prop, result2)
 
     # insert keyframe
-    if bl_item.record and (bpy.data.screens[0].is_animation_playing or qf_frame is not None):
+    if bl_item.record and (bpy.data.screens[0].is_animation_playing or qf_frame != {}):
         if bl_item.is_array and (bl_item.use_array is False):
             index = bl_item.array
             ref.keyframe_insert(data_path=prop, index=index, **item['ks_params'], **qf_frame)
@@ -276,7 +276,7 @@ class AddRoutes_Qlist_Convert(bpy.types.Operator):
             actua_osc(args)
             line = qfile.readline()
 
-        qf_frame = None
+        qf_frame = {}
         qfile.close()
 
         self.report({'INFO'}, "File conversion done")
@@ -444,7 +444,6 @@ def osc_frame_upd(scn):
 
             except:
                 print("Error while sending, improper OSC route #", item["n"], 'category :', bl_item.category)
-            break
 
                 #if bpy.context.window_manager.addroutes_osc_debug:
                 #    print('OSC Sending - route #', item['n'], addr, val2)
