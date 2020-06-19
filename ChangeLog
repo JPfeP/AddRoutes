@@ -1,10 +1,25 @@
+v0.30
+    -Routes can be collapsed/expanded
+    -Fix for python imports (using now absolute path)
+    -OSC and MIDI engines can now have a default system config
+    -Rewrite of the project settings using JSON
+    -Debug states for OSC/MIDI are at last saved with the project
+    -Update of rtmidi library allows deletion of unused midi ports
+    -Allow use of virtual ports (OSX/Linux)
+    -Improvement of the preferences screen
+    -Panels are now closed by default
+
+v0.29
+    -Fix for OSC keyframes insertion
+    -Fix for OSC sending more than one route
+
 v0.28
     -Puredata Qlist text file conversion
     -FaceCap text file conversion
 
 v0.27
     -Blemote: bug fix to handle scene change
-    -Blemote: now responds when launched after Blender
+    -Blemote now responds when launched after Blender
     -MIDI: rework of the Load/Parse operator to present a file browser
     -Tools: Import/Export of categories
     -Tools: some try/catch blocks to handle deprecated properties
@@ -21,7 +36,7 @@ v0.26
     -Name change for "AddRoutes"
 
 v0.25
-    -new specific type of engine for Blemote
+    -New specific type of engine for Blemote
     -OSC: fix regression with string messages
 
 v0.24

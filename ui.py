@@ -24,10 +24,11 @@ from bpy.utils import register_class, unregister_class
 from bpy.types import Panel
 from bpy.types import Menu
 from bpy_extras.io_utils import ImportHelper
-from data import generate_dict
+
 import json
 
-import g_vars
+from . import g_vars
+from .data import generate_dict
 
 
 class VIEW3D_PT_AddRoutes_MIDI_Config(Panel):
@@ -36,17 +37,29 @@ class VIEW3D_PT_AddRoutes_MIDI_Config(Panel):
     bl_label = "MIDI Config"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    # bl_context = "objectmode"
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
+        prefs = bpy.context.preferences.addons['AddRoutes'].preferences
         layout = self.layout
-        col = layout.column(align=True)
-        #col.label(text="MIDI Settings:")
 
         box = layout.box()
-        row = box.row()
-        row.prop(context.window_manager, "midi_in_device", text="Midi In")
-        box.prop(context.window_manager, "midi_out_device", text="Midi Out")
+        box.prop(context.window_manager, 'addroutes_midi_settings')
+
+        col = box.column(align=True)
+        row1 = col.row()
+        row2 = col.row()
+        row1.alert = context.window_manager.addroutes_midi_in_alert
+        row2.alert = context.window_manager.addroutes_midi_out_alert
+
+        if context.window_manager.addroutes_midi_settings == 'Project':
+            row1.prop(context.window_manager, "addroutes_midi_in_enum", text="Project In")
+            row2.prop(context.window_manager, "addroutes_midi_out_enum", text="Project Out")
+        else:
+            row1.prop(context.window_manager, "addroutes_sys_midi_in_enum", text="System In")
+            row2.prop(context.window_manager, "addroutes_sys_midi_out_enum", text="System Out")
+            box.operator('wm.save_userpref')
+
         box.operator("addroutes.refresh_devices", text='Refresh Devices List')
         box.prop(bpy.context.window_manager, 'addroutes_midi_debug', text='Debug (!)')
 
@@ -93,29 +106,47 @@ class VIEW3D_PT_AddRoutes_OSC_Config(Panel):
     bl_label = "OSC Config"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
+        prefs = bpy.context.preferences.addons['AddRoutes'].preferences
         layout = self.layout
-        col = layout.column(align=True)
+        box = layout.box()
+        col = box.column()
 
+        col.prop(context.window_manager, 'addroutes_osc_settings')
         row = col.row(align=True)
-        row.alert = bpy.context.window_manager.addroutes_osc_alert and bpy.context.window_manager.addroutes_osc_in_enable
-        row.prop(bpy.context.window_manager, 'addroutes_osc_udp_in', text="Listen on ")
-        row.prop(bpy.context.window_manager, 'addroutes_osc_port_in', text="Input port")
-        row.prop(bpy.context.window_manager, 'addroutes_osc_in_enable', text="")
-
+        row.alert = bpy.context.window_manager.addroutes_osc_in_alert and g_vars.osc_in_enable
         col2 = layout.column(align=True)
-        row2 = col2.row(align=True)
-        row2.prop(bpy.context.window_manager, 'addroutes_osc_udp_out', text="Destination address")
-        row2.prop(bpy.context.window_manager, 'addroutes_osc_port_out', text="Outport port")
-        row2.prop(bpy.context.window_manager, 'addroutes_osc_out_enable', text="")
+        row2 = col.row(align=True)
+        row2.alert = bpy.context.window_manager.addroutes_osc_out_alert and g_vars.osc_out_enable
 
-        col3 = layout.column()
-        row3 = col3.row(align=True)
+        if context.window_manager.addroutes_osc_settings == 'Project':
+            row.prop(bpy.context.window_manager, 'addroutes_osc_udp_in', text="Listen on")
+            row.prop(bpy.context.window_manager, 'addroutes_osc_port_in', text="Input port")
+            row.prop(bpy.context.window_manager, 'addroutes_osc_in_enable', text="")
+
+            row2.prop(bpy.context.window_manager, 'addroutes_osc_udp_out', text="Destination address")
+            row2.prop(bpy.context.window_manager, 'addroutes_osc_port_out', text="Outport port")
+            row2.prop(bpy.context.window_manager, 'addroutes_osc_out_enable', text="")
+        else:
+
+            row.prop(prefs, 'osc_udp_in', text="Listen on ")
+            row.prop(prefs, 'osc_port_in', text="Input port")
+            row.prop(prefs, 'osc_in_enable', text="")
+
+            row2.prop(prefs, 'osc_udp_out', text="Destination address")
+            row2.prop(prefs, 'osc_port_out', text="Outport port")
+            row2.prop(prefs, 'osc_out_enable', text="")
+            col2.operator('wm.save_userpref')
+
+        #col3 = layout.column()
+        row3 = col.row(align=True)
         row3.prop(bpy.context.window_manager, 'addroutes_osc_debug', text='Debug (!)')
 
-        col = layout.column()
-        col.separator()
+        box = layout.box()
+        col = box.column()
+        #col.separator()
         col.label(text="File conversion:")
         row = col.row()
         row.prop(context.scene, 'addroutes_qlistfile', text='')
@@ -139,20 +170,26 @@ class VIEW3D_PT_AddRoutes_Blemote_Config(Panel):
     bl_label = "Blemote Config"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
         layout = self.layout
-        col = layout.column(align=True)
+        prefs = bpy.context.preferences.addons['AddRoutes'].preferences
+        box = layout.box()
+        box.label(text="Blemote Settings:")
+        box.prop(prefs, "blemote_enable")
+        box.prop(prefs, "blemote_autoconf")
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.alert = bpy.context.window_manager.addroutes_blemote_alert and prefs.blemote_enable
+        row.prop(prefs, "blemote_udp_in")
+        row.prop(prefs, "blemote_port_in")
 
         row = col.row(align=True)
-        row.alert = bpy.context.window_manager.addroutes_blemote_alert
-        row.prop(bpy.context.window_manager, 'addroutes_blemote_udp_in', text="Listen on ")
-        row.prop(bpy.context.window_manager, 'addroutes_blemote_port_in', text="Input port")
-
-        col2 = layout.column(align=True)
-        row2 = col2.row(align=True)
-        row2.prop(bpy.context.window_manager, 'addroutes_blemote_udp_out', text="Destination address")
-        row2.prop(bpy.context.window_manager, 'addroutes_blemote_port_out', text="Outport port")
+        row.prop(prefs, "blemote_udp_out")
+        row.prop(prefs, "blemote_port_out")
+        row.active = not (prefs.blemote_autoconf)
+        box.operator('wm.save_userpref')
 
 
 class VIEW3D_PT_AddRoutes_Tools(Panel):
@@ -161,6 +198,7 @@ class VIEW3D_PT_AddRoutes_Tools(Panel):
     bl_label = "Tools"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
         layout = self.layout
@@ -193,7 +231,7 @@ class VIEW3D_PT_AddRoutes_Tools(Panel):
 
         row = layout.row()
         n_events = str(context.window_manager.n_overflow)
-        row.label(text='Overflow events: '+ n_events)
+        row.label(text='Overflow events: ' + n_events)
 
 
 def show_routes(context, layout, item, i, route_type):
@@ -207,10 +245,15 @@ def show_routes(context, layout, item, i, route_type):
     else:
         j = 1
 
-    # line 1
+    # Section 1 - Title bar
     #if context.window_manager.addroutes_osc_debug or context.window_manager.addroutes_midi_debug or context.scene.show_routes_number:
     box2 = box.box()
     row = box2.row()
+
+    if item.show_expanded:
+        row.prop(item, "show_expanded", text="", icon='DISCLOSURE_TRI_DOWN', emboss=False)
+    else:
+        row.prop(item, "show_expanded", text="", icon='DISCLOSURE_TRI_RIGHT', emboss=False)
 
     if route_type == 'NORMAL':
         row.label(text='Route #' + str(i) + "       ")
@@ -225,192 +268,193 @@ def show_routes(context, layout, item, i, route_type):
         row = box.row()
         row.prop(item, 'category')
 
-    # line 2 - Properties
-    row = box.row()
-    row.alignment = 'CENTER'
-    row.label(text="___Property___")
-    col = box.column(align=True)
-
-    if route_type == 'NORMAL' and not item.is_multi:
-        col.prop(item, 'is_str2eval', text='Python')
-    if item.is_str2eval:
-        col = box.column(align=True)
-        col.prop(item, 'str2eval')
-        col.prop(item, 'withctx')
-        col.prop(item, 'is_array', text='Is Array (show Index/All)')
-        col.prop(item, 'is_angle', text='Is Angle (allow conversion)')
-        # row.prop(item, 'is_enum')
-
-    if item.alert is True and item.mode != 'Off':
-        col.alert = True
-    if route_type == 'NORMAL' and not item.is_str2eval:
-        col.prop(item, 'id_type') #, icon_only=True)
-
-        # Note: arg1= target ID pointer, arg2= name of the according prop, arg3= obvious, arg4= ID cat of the scene
-        if item.is_multi and (item.VAR_use == 'name'):
-            col.prop(item, 'name_var')
-        else:
-            col.prop_search(item.id, item.id_type, bpy.data, item.id_type, text='Item')
-
-        col.prop(item, 'data_path', text='Path')
-
-    row_dp = col.row(align=True)
-    #row_dp.use_property_split = True                                                                               #trick to punch keyframe
-    if item.is_array:
-        if item.engine == 'MIDI' or item.engine == 'Blemote':
-            row_dp.prop(item, 'array', text="Index")
-        elif item.engine == 'OSC':
-            if item.use_array is False:
-                row_dp.prop(item, 'array', text='Index')
-            row_dp.prop(item, 'use_array', toggle=True)
-    if item.is_angle:
-        col.prop(item, 'rad2deg', toggle=True)
-
-    if (item.engine == 'MIDI' or item.engine == 'OSC') and not item.is_str2eval:
-        col = box.column(align=True)
-        col.prop(item, 'is_multi')
-        if item.is_multi:
-            col.prop(item, 'number')
-            col.prop(item, 'offset')
-            col.prop(item, 'VAR_use')
-
-    # Second Section
-    row = box.row()
-    row.alignment = 'CENTER'
-    row.label(text="___Engine___")
-    split = box.split(factor=0.8)
-    row = split.row()
-    row.prop(item, 'engine', text='Engine', expand=False)
-    row = split.row()
-    if item.engine != 'Blemote':
-        row.prop(item, 'blem_switch', text='Blemote')
-
-
-
-    # split = row.split(factor=.8)
-    # row_dp = split.row(align=True)
-    '''
- 
-    split2 = box.split(factor=0.8)
-    row_e = split2.row(align=True)
-    row_e2 = split2.row(align=True)
-    if item.engine != 'Blemote':
-        row_e2.prop(item, 'blem_switch', text='BL')
-    else:
-        row_e2.prop(item, 'record', text='Rec', icon='RADIOBUT_ON')
-
-    '''
-
-    col = box.column()
-    if item.engine == 'MIDI':
-
-        col.prop(item, 'channel')
-        col.prop(item, 'cont_type')
-
-        # Events with filter option
-        if item.f_show:
-            col.prop(item, 'filter')
-
-        # If filter on
-        if item.filter:
-            col.prop(item, 'controller', text='Select')
-
-        col3 = box.column(align=True)
-        col3.label(text='Rescale:')
-        row3 = col3.row(align=True)
-        row3.prop(item, 'rescale_mode', expand=True)
-        if item.rescale_mode != 'Auto' and item.rescale_mode != 'Direct':
-            row3 = col3.row(align=True)
-            row3.label(text='MIDI')
-            row3.prop(item, 'rescale_outside_low')
-            row3.prop(item, 'rescale_outside_high')
-        if item.rescale_mode != 'Direct':
-            row4 = col3.row(align=True)
-            row4.label(text='Blender')
-            row4.prop(item, 'rescale_blender_low')
-            row4.prop(item, 'rescale_blender_high')
-
-    # For OSC
-    elif item.engine == 'OSC':
-        split = box.split(factor=0.8)
-        row = split.row()
-        row.prop(item, 'osc_address')
-        row = split.row()
-        row.operator("addroutes.osc_pick", text='Pick').r = (i, j, 0)
-
-        split = box.split(factor=0.8)
-        row = split.row(align=True)
-        # row.prop(item, 'filter', text='Extract')
-        row.prop(item, 'osc_select_rank')
-        row.prop(item, 'osc_select_n')
-        row = split.row()
+    # Section 2 - Properties
+    if item.show_expanded:
+        row = box.row()
         row.alignment = 'CENTER'
-        if route_type != "SYSTEM":
-            if item.is_array and item.use_array:
-                row.label(text='(' + str(item.len) + ')')
+        row.label(text="___Property___")
+        col = box.column(align=True)
+
+        if route_type == 'NORMAL' and not item.is_multi:
+            col.prop(item, 'is_str2eval', text='Python')
+        if item.is_str2eval:
+            col = box.column(align=True)
+            col.prop(item, 'str2eval')
+            col.prop(item, 'withctx')
+            col.prop(item, 'is_array', text='Is Array (show Index/All)')
+            col.prop(item, 'is_angle', text='Is Angle (allow conversion)')
+            # row.prop(item, 'is_enum')
+
+        if item.alert is True and item.mode != 'Off':
+            col.alert = True
+        if route_type == 'NORMAL' and not item.is_str2eval:
+            col.prop(item, 'id_type') #, icon_only=True)
+
+            # Note: arg1= target ID pointer, arg2= name of the according prop, arg3= obvious, arg4= ID cat of the scene
+            if item.is_multi and (item.VAR_use == 'name'):
+                col.prop(item, 'name_var')
             else:
-                row.label(text='(1)')
+                col.prop_search(item.id, item.id_type, bpy.data, item.id_type, text='Item')
+
+            col.prop(item, 'data_path', text='Path')
+
+        row_dp = col.row(align=True)
+        #row_dp.use_property_split = True                                                                               #trick to punch keyframe
+        if item.is_array:
+            if item.engine == 'MIDI' or item.engine == 'Blemote':
+                row_dp.prop(item, 'array', text="Index")
+            elif item.engine == 'OSC':
+                if item.use_array is False:
+                    row_dp.prop(item, 'array', text='Index')
+                row_dp.prop(item, 'use_array', toggle=True)
+        if item.is_angle:
+            col.prop(item, 'rad2deg', toggle=True)
+
+        if (item.engine == 'MIDI' or item.engine == 'OSC') and not item.is_str2eval:
+            col = box.column(align=True)
+            col.prop(item, 'is_multi')
+            if item.is_multi:
+                col.prop(item, 'number')
+                col.prop(item, 'offset')
+                col.prop(item, 'VAR_use')
+
+        # Second Section
+        row = box.row()
+        row.alignment = 'CENTER'
+        row.label(text="___Engine___")
+        split = box.split(factor=0.8)
+        row = split.row()
+        row.prop(item, 'engine', text='Engine', expand=False)
+        row = split.row()
+        if item.engine != 'Blemote':
+            row.prop(item, 'blem_switch', text='Blemote')
+
+
+
+        # split = row.split(factor=.8)
+        # row_dp = split.row(align=True)
+        '''
+     
+        split2 = box.split(factor=0.8)
+        row_e = split2.row(align=True)
+        row_e2 = split2.row(align=True)
+        if item.engine != 'Blemote':
+            row_e2.prop(item, 'blem_switch', text='BL')
         else:
-            if item.use_array:
-                row.label(text='(?)')
+            row_e2.prop(item, 'record', text='Rec', icon='RADIOBUT_ON')
+    
+        '''
+
+        col = box.column()
+        if item.engine == 'MIDI':
+
+            col.prop(item, 'channel')
+            col.prop(item, 'cont_type')
+
+            # Events with filter option
+            if item.f_show:
+                col.prop(item, 'filter')
+
+            # If filter on
+            if item.filter:
+                col.prop(item, 'controller', text='Select')
+
+            col3 = box.column(align=True)
+            col3.label(text='Rescale:')
+            row3 = col3.row(align=True)
+            row3.prop(item, 'rescale_mode', expand=True)
+            if item.rescale_mode != 'Auto' and item.rescale_mode != 'Direct':
+                row3 = col3.row(align=True)
+                row3.label(text='MIDI')
+                row3.prop(item, 'rescale_outside_low')
+                row3.prop(item, 'rescale_outside_high')
+            if item.rescale_mode != 'Direct':
+                row4 = col3.row(align=True)
+                row4.label(text='Blender')
+                row4.prop(item, 'rescale_blender_low')
+                row4.prop(item, 'rescale_blender_high')
+
+        # For OSC
+        elif item.engine == 'OSC':
+            split = box.split(factor=0.8)
+            row = split.row()
+            row.prop(item, 'osc_address')
+            row = split.row()
+            row.operator("addroutes.osc_pick", text='Pick').r = (i, j, 0)
+
+            split = box.split(factor=0.8)
+            row = split.row(align=True)
+            # row.prop(item, 'filter', text='Extract')
+            row.prop(item, 'osc_select_rank')
+            row.prop(item, 'osc_select_n')
+            row = split.row()
+            row.alignment = 'CENTER'
+            if route_type != "SYSTEM":
+                if item.is_array and item.use_array:
+                    row.label(text='(' + str(item.len) + ')')
+                else:
+                    row.label(text='(1)')
             else:
-                row.label(text='(1)')
-
-    row = box.row()
-
-    # this is for blemote, later
-    if item.blem_switch or item.engine == 'Blemote':
-        box.label(text='Blemote slider:')
-        row = box.row(align=True)
-        row.prop(item, 'blem_min')
-        row.prop(item, 'blem_max')
-        row.prop(item, 'blem_step')
-
-    # 3th section
-    row = box.row()
-    row.alignment = 'CENTER'
-    row.label(text="___Action___")
-    col = box.column(align=True)
-    col.prop(item, 'eval_mode')
-    if item.eval_mode == 'expr':
-        col.prop(item, 'eval_expr')
-
-    box.separator()
-    if context.scene.show_postprocess:
-        row = box.row(align=True)
-        row.label(text='Envelope settings:')
-        row.prop(item, 'env_attack', text='Attack')
-        row.prop(item, 'env_release', text='Release')
-        row = box.row()
-        row.prop(item, 'env_auto')
-
-        op = row.operator("addroutes.midienv", text='Apply Envelope').r = (i, j, 0)
-
-    box.separator()
-    if item.record:
-        box.label(text='Keyframes settings:')
+                if item.use_array:
+                    row.label(text='(?)')
+                else:
+                    row.label(text='(1)')
 
         row = box.row()
-        row.prop(item, 'kf_needed', text='Needed')
-        row.prop(item, 'kf_visual', text='Visual')
-        row.prop(item, 'kf_rgb', text='XYZ to RGB')
 
+        # this is for blemote, later
+        if item.blem_switch or item.engine == 'Blemote':
+            box.label(text='Blemote slider:')
+            row = box.row(align=True)
+            row.prop(item, 'blem_min')
+            row.prop(item, 'blem_max')
+            row.prop(item, 'blem_step')
+
+        # 3th section
         row = box.row()
-        row.prop(item, 'kf_replace', text='Replace')
-        row.prop(item, 'kf_available', text='Available')
-        row.prop(item, 'kf_cycle', text='Cycle aware')
+        row.alignment = 'CENTER'
+        row.label(text="___Action___")
+        col = box.column(align=True)
+        col.prop(item, 'eval_mode')
+        if item.eval_mode == 'expr':
+            col.prop(item, 'eval_expr')
 
-        box.prop(item, 'kf_group', text='Group')
+        box.separator()
+        if context.scene.show_postprocess:
+            row = box.row(align=True)
+            row.label(text='Envelope settings:')
+            row.prop(item, 'env_attack', text='Attack')
+            row.prop(item, 'env_release', text='Release')
+            row = box.row()
+            row.prop(item, 'env_auto')
 
-    split = box.split(factor=0.8)
-    row = split.row()
-    row.prop(item, 'mode', expand=True)
-    if item.engine == 'Blemote':
-        row.enabled = False
-    else:
-        row.enabled = True
-    row = split.row()
-    row.prop(item, 'record', text='Rec', icon='RADIOBUT_ON')
+            op = row.operator("addroutes.midienv", text='Apply Envelope').r = (i, j, 0)
+
+        box.separator()
+        if item.record:
+            box.label(text='Keyframes settings:')
+
+            row = box.row()
+            row.prop(item, 'kf_needed', text='Needed')
+            row.prop(item, 'kf_visual', text='Visual')
+            row.prop(item, 'kf_rgb', text='XYZ to RGB')
+
+            row = box.row()
+            row.prop(item, 'kf_replace', text='Replace')
+            row.prop(item, 'kf_available', text='Available')
+            row.prop(item, 'kf_cycle', text='Cycle aware')
+
+            box.prop(item, 'kf_group', text='Group')
+
+        split = box.split(factor=0.8)
+        row = split.row()
+        row.prop(item, 'mode', expand=True)
+        if item.engine == 'Blemote':
+            row.enabled = False
+        else:
+            row.enabled = True
+        row = split.row()
+        row.prop(item, 'record', text='Rec', icon='RADIOBUT_ON')
 
 
 class VIEW3D_PT_AddRoutes_Routes(Panel):
@@ -419,6 +463,7 @@ class VIEW3D_PT_AddRoutes_Routes(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_idname = "VIEW3D_PT_Mom_routes"
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
         layout = self.layout
@@ -437,6 +482,7 @@ class VIEW3D_PT_AddR_Sys_Routes(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_idname = "VIEW3D_PT_AddR_system_routes"
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
         prefs = bpy.context.preferences.addons['AddRoutes'].preferences
@@ -834,6 +880,7 @@ class WM_OT_button_context_addroutes(bpy.types.Operator):
                     setattr(my_item.id, id_type, id)
                     my_item.data_path = data_path
                 except:
+                    print (value1, value2, prop)
                     self.report({'INFO'}, "Error !")
 
         return {'FINISHED'}
@@ -883,7 +930,7 @@ cls = ( AddRoutes_AddProp,
         AddRoutes_OscPick,
         VIEW3D_PT_AddRoutes_MIDI_Config,
         VIEW3D_PT_AddRoutes_OSC_Config,
-        #VIEW3D_PT_AddRoutes_Blemote_Config,
+        VIEW3D_PT_AddRoutes_Blemote_Config,
         VIEW3D_PT_AddRoutes_Tools,
         VIEW3D_PT_AddRoutes_Routes,
         VIEW3D_PT_AddR_Sys_Routes,

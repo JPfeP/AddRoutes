@@ -22,7 +22,7 @@
 bl_info = {
     "name": "AddRoutes",
     "author": "JPfeP",
-    "version": (0, 29),
+    "version": (0, 30),
     "blender": (2, 80, 0),
     "location": "",
     "description": "Realtime MIDI, OSC protocols in the viewport",
@@ -36,31 +36,41 @@ import sys
 import os
 script_file = os.path.realpath(__file__)
 directory = os.path.dirname(script_file)
+
 if directory not in sys.path:
    sys.path.append(directory)
- 
 
 if "bpy" in locals():
     import importlib
-    importlib.reload(ui)
-    importlib.reload(midi)
-    importlib.reload(osc)
     importlib.reload(data)
+    importlib.reload(load_save)
+    importlib.reload(ui)
+    importlib.reload(midi_devices)
+    importlib.reload(midi)
+    importlib.reload(osc_devices)
+    importlib.reload(osc)
     importlib.reload(blemote)
+
 else:
-    from . import ui
-    from . import midi
-    from . import osc
     from . import data
+    from . import load_save
+    from . import ui
+    from . import midi_devices
+    from . import midi
+    from . import osc_devices
+    from . import osc
     from . import blemote
+
 
 import bpy
 from bpy.utils import register_class, unregister_class
 from bpy.types import AddonPreferences, PropertyGroup, Collection
 from bpy.props import StringProperty, IntProperty, BoolProperty, EnumProperty, PointerProperty, CollectionProperty
 
-import g_vars
-from data import generate_dict
+from . import g_vars
+from .data import generate_dict
+from .osc_devices import update_osc_in, update_osc_out, update_osc_in_enable, update_osc_out_enable
+#from .midi_devices import update_midi_mode
 
 
 class AddR_Items_PG(bpy.types.PropertyGroup):
@@ -176,7 +186,7 @@ class AddR_Items_PG(bpy.types.PropertyGroup):
     blem_min: bpy.props.FloatProperty(name='Min', default=0, update=generate_dict)
     blem_max: bpy.props.FloatProperty(name='Max', default=100, update=generate_dict)
     blem_step: bpy.props.FloatProperty(name='Step', min=0, description='Minimal interval (0 = None)',
-                                     update=generate_dict)
+                                       update=generate_dict)
 
     # for multi routes
     is_multi: bpy.props.BoolProperty(name='Multi routing', update=generate_dict)
@@ -210,6 +220,8 @@ class AddR_Items_PG(bpy.types.PropertyGroup):
     # for the categories feature
     category: bpy.props.StringProperty(default='System')
 
+    # gui features
+    show_expanded: bpy.props.BoolProperty(default=True)
 
 
 class AddonPreferences(AddonPreferences):
@@ -219,19 +231,19 @@ class AddonPreferences(AddonPreferences):
 
     blemote_udp_in: StringProperty(
         name="Server",
-        default="0.0.0.0",
+        default="0.0.0.0"
     )
     blemote_port_in: IntProperty(
         name="port",
-        default=10000,
+        default=10000
     )
     blemote_udp_out: StringProperty(
         name="Output",
-        default="127.0.0.1",
+        default="127.0.0.1"
     )
     blemote_port_out: IntProperty(
         name="port",
-        default=10001,
+        default=10001
     )
     blemote_enable: BoolProperty(
         name="Enable Blemote",
@@ -239,7 +251,7 @@ class AddonPreferences(AddonPreferences):
     )
     blemote_autoconf: BoolProperty(
         name="Automatic output configuration",
-        default=True,
+        default=True
     )
     refresh: IntProperty(
         name="Refresh rate of engines (ms)",
@@ -251,38 +263,100 @@ class AddonPreferences(AddonPreferences):
         name="Maximum events per cycle",
         default=200,
         min=1
-
     )
     AddR_System_Routes: CollectionProperty(
         name="system_routes",
         type=AddR_Items_PG,
     )
-
-    '''
-    send_mode: BoolProperty(
-        name=""
+    # MIDI devices
+    midi_in_device: StringProperty(
+        name="MIDI Input",
+        default="None",
     )
-    '''
+    midi_out_device: StringProperty(
+        name="MIDI Output",
+        default="None",
+    )
+    # OSC devices
+    osc_in_enable: BoolProperty(update=update_osc_in_enable)
+
+    osc_out_enable: BoolProperty(update=update_osc_out_enable)
+
+    osc_udp_in: StringProperty(
+        name="OSC Input System Address",
+        default='0.0.0.0',
+        update=update_osc_in,
+        description='The IP of the interface of your Blender machine to listen on, set to 0.0.0.0 for all of them')
+
+    osc_udp_out: StringProperty(
+        default="127.0.0.1",
+        update=update_osc_out,
+        description='The IP of the destination machine to send messages to')
+
+    osc_port_in: IntProperty(
+        default=9001,
+        min=0,
+        max=65535,
+        update=update_osc_in,
+        description='The input network port (0-65535)'
+    )
+
+    osc_port_out: IntProperty(
+        default=9002,
+        min=0,
+        max=65535,
+        update=update_osc_out,
+        description='The output network port (0-65535)'
+    )
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text="General configuration:")
-        layout.prop(self, "refresh")
-        layout.prop(self, "overflow")
-        layout.label(text="Blemote configuration:")
-        layout.prop(self, "blemote_enable")
-        row = layout.row()
+        box = layout.box()
+        box.label(text="General Settings:")
+        col = box.column(align=True)
+        col.prop(self, "refresh")
+        col.prop(self, "overflow")
+
+        box = layout.box()
+        box.label(text="Blemote Settings:")
+        box.prop(self, "blemote_enable")
+        box.prop(self, "blemote_autoconf")
+        col = box.column(align=True)
+        row = col.row(align=True)
         row.alert = bpy.context.window_manager.addroutes_blemote_alert and self.blemote_enable
         row.prop(self, "blemote_udp_in")
         row.prop(self, "blemote_port_in")
 
-        layout.prop(self, "blemote_autoconf")
-
-        row = layout.row()
+        row = col.row(align=True)
         row.prop(self, "blemote_udp_out")
         row.prop(self, "blemote_port_out")
         row.active = not(self.blemote_autoconf)
 
+        box = layout.box()
+        box.label(text="MIDI System Settings:")
+        col = box.column(align=True)
+        row1 = col.row(align=True)
+        row2 = col.row(align=True)
+        row1.alert = context.window_manager.addroutes_midi_in_alert
+        row2.alert = context.window_manager.addroutes_midi_out_alert
+        row1.prop(context.window_manager, "addroutes_sys_midi_in_enum", text="System In")
+        row2.prop(context.window_manager, "addroutes_sys_midi_out_enum", text="System Out")
+        box.operator("addroutes.refresh_devices", text='Refresh Devices List')
+
+        box = layout.box()
+        box.label(text="OSC System Settings:")
+        col = box.column(align=True)
+        row1 = col.row(align=True)
+        row2 = col.row(align=True)
+        row1.alert = bpy.context.window_manager.addroutes_osc_in_alert and g_vars.osc_in_enable
+        row2.alert = bpy.context.window_manager.addroutes_osc_out_alert and g_vars.osc_out_enable
+        row1.prop(self, 'osc_udp_in', text="Listen on ")
+        row1.prop(self, 'osc_port_in', text="Input port")
+        row1.prop(self, 'osc_in_enable', text="")
+
+        row2.prop(self, 'osc_udp_out', text="Destination address")
+        row2.prop(self, 'osc_port_out', text="Output port")
+        row2.prop(self, 'osc_out_enable', text="")
 
 cls = (
     AddR_Items_PG,
@@ -292,8 +366,11 @@ cls = (
 
 def register():
     data.register()
+    load_save.register()
     ui.register()
+    midi_devices.register()
     midi.register()
+    osc_devices.register()
     osc.register()
     blemote.register()
 
@@ -303,9 +380,12 @@ def register():
 
 def unregister():
     osc.unregister()
+    osc_devices.unregister()
     ui.unregister()
     midi.unregister()
+    midi_devices.unregister()
     data.unregister()
+    load_save.unregister()
     blemote.unregister()
 
     for c in cls:

@@ -25,8 +25,9 @@ from bpy.utils import register_class, unregister_class
 from oscpy.server import OSCThreadServer
 from oscpy.client import OSCClient
 import time
-import g_vars
-from data import upd_settings_sub
+
+from . import g_vars
+from .load_save import save_settings
 
 blem_server = None
 bl_ok = False

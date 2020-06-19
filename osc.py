@@ -27,18 +27,14 @@ from bpy_extras.io_utils import ImportHelper
 
 from mathutils import *
 
-from oscpy.server import OSCThreadServer
 from oscpy.client import OSCClient
 
-import g_vars
-from data import upd_settings_sub
 import numpy as np
 
 import time
 #import sys
 
-osc_server = None
-osc_in_ok = False
+from . import g_vars
 
 #for qfile conversion
 qf_frame = {}
@@ -144,53 +140,6 @@ def actua_osc(msg):
     # if no route has triggered a debug_flag
     if bpy.context.window_manager.addroutes_osc_debug is True and debug_flag is False:
         print("... but no matching route")
-
-
-
-
-def OSC_callback(*args):
-    bcw = bpy.context.window_manager
-    fail = True
-
-    args = list(args)
-
-    # still needed to decode the address
-    args[0] = args[0].decode('UTF-8')
-
-    g_vars.osc_queue.append(args)
-
-
-osc_server = OSCThreadServer(encoding='utf8', default_handler=OSC_callback)
-
-
-def save_osc_udp_in(self, context):
-    global osc_in_ok, osc_server
-    upd_settings_sub(10)
-    osc_in_ok = False
-    osc_server.stop_all()
-
-
-def save_osc_port_in(self, context):
-    global osc_in_ok
-    upd_settings_sub(11)
-    osc_in_ok = False
-    osc_server.stop_all()
-
-
-def save_osc_udp_out(self, context):
-    upd_settings_sub(12)
-
-
-def save_osc_port_out(self, context):
-    upd_settings_sub(13)
-
-
-def save_osc_in_enable(self, context):
-    upd_settings_sub(14)
-
-
-def save_osc_out_enable(self, context):
-    upd_settings_sub(15)
 
 
 class AddRoutes_Qlist_Open(bpy.types.Operator, ImportHelper):
@@ -400,10 +349,7 @@ def osc_frame_upd(scn):
         return
 
     # send osc events
-    bcw = bpy.context.window_manager
-    osc = OSCClient(bcw.addroutes_osc_udp_out, bcw.addroutes_osc_port_out, encoding='utf8')
-
-    if bcw.addroutes_osc_out_enable is True:
+    if g_vars.osc_out_enable is True and bpy.context.window_manager.addroutes_osc_out_alert is False:
         for bl_item, item in g_vars.addroutes_osc_out:
             # getting current value
             if bl_item.is_str2eval:
@@ -440,51 +386,12 @@ def osc_frame_upd(scn):
                         val3.insert(0, item['idx'])
 
                     addr = str.encode(item['address'])
-                    osc.send_message(addr, val3)
+                    g_vars.osc_client.send_message(addr, val3)
 
             except:
-                print("Error while sending, improper OSC route #", item["n"], 'category :', bl_item.category)
-
-                #if bpy.context.window_manager.addroutes_osc_debug:
-                #    print('OSC Sending - route #', item['n'], addr, val2)
-
-
-def redraw_hack():
-    # trick to update the GUI
-    for window in bpy.context.window_manager.windows:
-        screen = window.screen
-        for area in screen.areas:
-            if area.type == 'VIEW_3D':
-                area.tag_redraw()
-
-
-def retry_server():
-    global osc_server, osc_in_ok
-    bcw = bpy.context.window_manager
-    ip = bcw.addroutes_osc_udp_in
-    port = bcw.addroutes_osc_port_in
-
-    # open connection
-    if bcw.addroutes_osc_in_enable is True and osc_in_ok is False:
-        # try opening
-        try:
-            sock = osc_server.listen(address=ip, port=port, default=False)
-            bcw.addroutes_osc_alert = False
-            osc_in_ok = True
-            redraw_hack()
-
-        except:
-            if bcw.addroutes_osc_alert is not True:
-                bcw.addroutes_osc_alert = True
-                redraw_hack()
-
-    # close connection
-    if bcw.addroutes_osc_in_enable is False and osc_in_ok is True:
-        # try closing a previous instance
-        osc_server.stop_all()
-        osc_in_ok = False
-
-    return 1
+                if bpy.context.window_manager.addroutes_osc_debug:
+                    print("Error while sending, improper OSC route #", item["n"], 'category :', bl_item.category)
+                    #    print('OSC Sending - route #', item['n'], addr, val2)
 
 
 cls = (AddRoutes_Qlist_Open,
@@ -505,38 +412,7 @@ def register():
     bpy.types.Scene.addroutes_qf_offset = bpy.props.IntProperty(name='At frame', default=1,
                                                       description='At which frame convert the Pd/Qlist file')
 
-    bpy.types.WindowManager.addroutes_osc_udp_in = bpy.props.StringProperty(
-        default="0.0.0.0",
-        update=save_osc_udp_in,
-        description='The IP of the interface of your Blender machine to listen on, set to 0.0.0.0 for all of them')
-
-    bpy.types.WindowManager.addroutes_osc_udp_out = bpy.props.StringProperty(
-        default="127.0.0.1",
-        update=save_osc_udp_out,
-        description='The IP of the destination machine to send messages to')
-
-    bpy.types.WindowManager.addroutes_osc_port_in = bpy.props.IntProperty(
-        default=9001,
-        min=0,
-        max=65535,
-        update=save_osc_port_in,
-        description='The input network port (0-65535)')
-
-    bpy.types.WindowManager.addroutes_osc_port_out = bpy.props.IntProperty(
-        default=9002,
-        min=0,
-        max=65535,
-        update=save_osc_port_out,
-        description='The output network port (0-65535)')
-
-    bpy.types.WindowManager.addroutes_osc_alert = bpy.props.BoolProperty()
-    bpy.types.WindowManager.addroutes_osc_debug = bpy.props.BoolProperty(
-        description='Debug incoming OSC messages in console. Warning: Can be slow !')
-    bpy.types.WindowManager.addroutes_osc_in_enable = bpy.props.BoolProperty(update=save_osc_in_enable)
-    bpy.types.WindowManager.addroutes_osc_out_enable = bpy.props.BoolProperty(update=save_osc_out_enable)
-
     bpy.app.timers.register(actua_osc_timer, persistent=True)
-    bpy.app.timers.register(retry_server, persistent=True)
     bpy.app.handlers.frame_change_pre.append(osc_frame_upd)
 
     for c in cls:
@@ -548,16 +424,7 @@ def unregister():
     del bpy.types.Scene.addroutes_fcap_offset
     del bpy.types.Scene.addroutes_qlistfile
     del bpy.types.Scene.addroutes_qf_offset
-    del bpy.types.WindowManager.addroutes_osc_udp_in
-    del bpy.types.WindowManager.addroutes_osc_udp_out
-    del bpy.types.WindowManager.addroutes_osc_port_in
-    del bpy.types.WindowManager.addroutes_osc_port_out
-    del bpy.types.WindowManager.addroutes_osc_alert
-    del bpy.types.WindowManager.addroutes_osc_debug
-    del bpy.types.WindowManager.addroutes_osc_in_enable
-    del bpy.types.WindowManager.addroutes_osc_out_enable
     bpy.app.timers.unregister(actua_osc_timer)
-    bpy.app.timers.unregister(retry_server)
     bpy.app.handlers.frame_change_pre.remove(osc_frame_upd)
     for c in cls:
         unregister_class(c)

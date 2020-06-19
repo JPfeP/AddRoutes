@@ -23,13 +23,13 @@ import bpy
 import copy
 from bpy.app.handlers import persistent
 from bpy.utils import register_class, unregister_class
-from distutils.util import strtobool
 from numpy import radians, degrees
 import numpy as np
 
 import sys
+import json
 
-import g_vars
+from . import g_vars
 
 addroutes_blemote_pre = {}
 
@@ -551,7 +551,7 @@ class AddRoutes_ID_PG(bpy.types.PropertyGroup):
     worlds:         bpy.props.PointerProperty(name="ID_wod", type=bpy.types.World, update=generate_dict)
 
 
-g_vars.ID_types=[
+g_vars.ID_types = [
                     ('actions', 'Action', 'Action', 'ACTION', 0),
                     ('armatures', 'Armature', 'Armature', 'ARMATURE_DATA', 1),
                     ('brushes', 'Brush', 'Brush', 'BRUSH_DATA', 2),
@@ -708,8 +708,8 @@ class MOM_Items_PG(bpy.types.PropertyGroup):
         update=generate_dict)
     name_var: bpy.props.StringProperty(name='Base name', default='name_VAR', update=generate_dict)
     offset: bpy.props.IntProperty(name="Offset ", default=0, update=generate_dict)
-    osc_select_rank: bpy.props.IntProperty(name="From", update=generate_dict)
-    osc_select_n: bpy.props.IntProperty(name="n", min=1, default=1, update=generate_dict)
+    osc_select_rank: bpy.props.IntProperty(name="From", description="Starting rank to pick data in the incoming payload", update=generate_dict)
+    osc_select_n: bpy.props.IntProperty(name="n", min=1, default=1, description="Number of items to pick in the incoming payload", update=generate_dict)
 
     # for angles
     rad2deg: bpy.props.BoolProperty(name='Deg <-> Rad', default=True, update=generate_dict, description='Convert degrees <-> radians')
@@ -729,6 +729,9 @@ class MOM_Items_PG(bpy.types.PropertyGroup):
 
     # for internal sorting
     perma_rank: bpy.props.IntProperty()
+
+    # gui features
+    show_expanded: bpy.props.BoolProperty(default=True)
 
 
 class AddRoutes_GetCTX(bpy.types.Operator):
@@ -753,152 +756,6 @@ class AddRoutes_GetCTX(bpy.types.Operator):
             g_vars.eval_ref = None
 
         return {'FINISHED'}
-
-
-def upd_settings_sub(n):
-    text_settings = None
-    for text in bpy.data.texts:
-        if text.name == '.mom_settings':
-            text_settings = text
-
-    if text_settings is None:
-        bpy.ops.text.new()
-        text_settings = bpy.data.texts[-1]
-        text_settings.name = '.mom_settings'
-
-    while len(text_settings.lines) < 30:
-        text_settings.write("\n")
-
-    # MIDI
-    if n == 0:
-        text_settings.lines[0].body = str(int(bpy.context.window_manager.autorun))
-    elif n == 1:
-        text_settings.lines[1].body = bpy.context.window_manager.midi_in_device
-    elif n == 2:
-        text_settings.lines[2].body = bpy.context.window_manager.midi_out_device
-    elif n == 3:
-        text_settings.lines[3].body = str(bpy.context.window_manager.rate)
-
-    # OSC
-    elif n == 10:
-        text_settings.lines[10].body = bpy.context.window_manager.addroutes_osc_udp_in
-    elif n == 11:
-        text_settings.lines[11].body = str(bpy.context.window_manager.addroutes_osc_port_in)
-    elif n == 12:
-        text_settings.lines[12].body = bpy.context.window_manager.addroutes_osc_udp_out
-    elif n == 13:
-        text_settings.lines[13].body = str(bpy.context.window_manager.addroutes_osc_port_out)
-    elif n == 14:
-        text_settings.lines[n].body = str(bpy.context.window_manager.addroutes_osc_in_enable)
-    elif n == 15:
-        text_settings.lines[n].body = str(bpy.context.window_manager.addroutes_osc_out_enable)
-
-    # Blemote
-    elif n == 20:
-        text_settings.lines[20].body = bpy.context.window_manager.addroutes_blemote_udp_in
-    elif n == 21:
-        text_settings.lines[21].body = str(bpy.context.window_manager.addroutes_blemote_port_in)
-    elif n == 22:
-        text_settings.lines[22].body = bpy.context.window_manager.addroutes_blemote_udp_out
-    elif n == 23:
-        text_settings.lines[23].body = str(bpy.context.window_manager.addroutes_blemote_port_out)
-
-
-# Restore saved settings
-@persistent
-def addroutes_handler(scene):
-    global error_device
-    for text in bpy.data.texts:
-        if text.name == '.mom_settings':
-            # for midi settings
-            try:
-                if text.lines[1].body != '':
-                    bpy.context.window_manager.midi_in_device = text.lines[1].body
-            except:
-                error_device = True
-                print("MIDI In device not found")
-            try:
-                if text.lines[2].body != '':
-                    bpy.context.window_manager.midi_out_device = text.lines[2].body
-            except:
-                error_device = True
-                print("MIDI Out device not found")
-
-            # for OSC settings
-            try:
-                if text.lines[10].body != '':
-                    bpy.context.window_manager.addroutes_osc_udp_in = text.lines[10].body
-            except:
-                print("OSC: Using default input IP")
-            try:
-                bpy.context.window_manager.addroutes_osc_port_in = int(text.lines[11].body)
-
-            except:
-                print("OSC: Using default input port")
-
-            try:
-                if text.lines[12].body != '':
-                    bpy.context.window_manager.addroutes_osc_udp_out = text.lines[12].body
-            except:
-                print("OSC: Using default output IP")
-            try:
-                bpy.context.window_manager.addroutes_osc_port_out = int(text.lines[13].body)
-            except:
-                print("OSC: Using default output port")
-
-            try:
-
-                bpy.context.window_manager.addroutes_osc_in_enable = strtobool(text.lines[14].body)
-            except:
-                pass
-            try:
-                bpy.context.window_manager.addroutes_osc_out_enable = strtobool(text.lines[15].body)
-            except:
-                pass
-
-
-            # for Blemote settings
-            try:
-                if text.lines[20].body != '':
-                    bpy.context.window_manager.addroutes_blemote_udp_in = text.lines[20].body
-            except:
-                print("Blemote: Using default input IP")
-            try:
-                bpy.context.window_manager.addroutes_blemote_port_in = int(text.lines[21].body)
-
-            except:
-                print("Blemote: Using default input port")
-
-            try:
-                if text.lines[22].body != '':
-                    bpy.context.window_manager.addroutes_blemote_udp_out = text.lines[22].body
-            except:
-                print("Blemote: Using default output IP")
-            try:
-                bpy.context.window_manager.addroutes_blemote_port_out = int(text.lines[23].body)
-            except:
-                print("Blemote: Using default output port")
-
-    # This is a hack to start OSC and Blemote on a fresh project without config yet
-    '''
-    try:
-        bpy.data.texts['.mom_settings']
-
-    except:
-        bpy.context.window_manager.addroutes_osc_port_in = bpy.context.window_manager.addroutes_osc_port_in
-        bpy.context.window_manager.addroutes_blemote_port_in = bpy.context.window_manager.addroutes_blemote_port_in
-    '''
-
-    #generate_dict(None, bpy.context) # when the file load, may be useless if scene test
-    bpy.ops.addroutes.midifile_parse()
-    build_idx()
-
-
-def build_idx():
-    g_vars.highest_rank
-    for i, (j, item) in enumerate(yield_all_routes()):
-        item.perma_rank = i
-        g_vars.highest_rank = i
 
 
 cls = ( MOM_categories_PG,
@@ -926,11 +783,9 @@ def register():
             ('Category', 'Category', '', '', 1)
         ]
     )
-    bpy.app.handlers.load_post.append(addroutes_handler)
 
 
 def unregister():
-    bpy.app.handlers.load_post.remove(addroutes_handler)
     del bpy.types.Scene.MOM_categories
     del bpy.types.Scene.MOM_catenum
     del bpy.types.Scene.MOM_sorting

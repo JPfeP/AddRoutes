@@ -34,30 +34,17 @@ from bpy.app.handlers import persistent
 from bpy_extras.io_utils import ImportHelper
 import functools
 
-import rtmidi
-from rtmidi.midiutil import open_midiinput
-from rtmidi.midiutil import open_midioutput
-#from rtmidi.m import open_port
-
 import mido
 from mido import MidiFile
 
-import g_vars
+from . import g_vars
 
-from data import generate_dict
-from data import upd_settings_sub
-from data import yield_all_routes
-from data import build_idx
+from .data import generate_dict
+from .data import yield_all_routes
+from .load_save import build_idx
 
-MIDI_list_enum = []
-midi_in_list = []
-midi_out_list = []
 MIDI_sent_values = [0 for i in range(1000)]
-error_device = False
 
-#Creation of two MIDI ports
-midiin = rtmidi.MidiIn()
-midiout = rtmidi.MidiOut()
 msg = []
 
 CC_6 = [0 for i in range(16)]
@@ -104,24 +91,23 @@ def get_ctx_scene():
 
 
 def actua_timer():
-    #global scn
     prefs = bpy.context.preferences.addons['AddRoutes'].preferences
     scn = bpy.data.window_managers[0].windows[0].scene
 
-    if midiin is not None and scn is not None:
+    if g_vars.midiin is not None and scn is not None:
 
         for i in range(prefs.overflow):
-            msg = midiin.get_message()
+            msg = g_vars.midiin.get_message()
             if msg:
                 arr = decode(scn, msg[0])
                 # trick to prevent Struct RNA of type Scene has been removed
                 actualise(scn, arr)
 
-        msg = midiin.get_message()
+        msg = g_vars.midiin.get_message()
         cnt = 1024 - prefs.overflow
         if msg is not None and cnt > 0:
             for i in range(cnt):
-                msg = midiin.get_message()
+                msg = g_vars.midiin.get_message()
             bpy.context.window_manager.n_overflow += 1
 
     # for blemote injection
@@ -234,7 +220,7 @@ def actualise(scn, msg):
 
             if bpy.context.window_manager.addroutes_midi_debug is True:
                 if dico is not None:
-                    print("---> OK route #"+str(n), ", category: "+bl_item.category, ", updading with: ", val)
+                    print("---> OK route #"+str(n), ", category: "+bl_item.category, ", updating with: ", val)
                 else:
                     print("---> OK route #"+str(n), ", category: "+bl_item.category, "... but filtered out")
                 debug = True
@@ -384,45 +370,7 @@ def decode(scn, message):
 def addroutes_send():
     global addroutes_in
     for item in addroutes_in:
-        midiout.send_message([0])
-
-
-def set_midiin(port):
-    global midiin
-    if port != "None":
-        #midiin.open_port(0)
-        midiin.close_port()
-        #midiin, portname = open_midiport(port=port, type_="input")
-        midiin, portname = open_midiinput(port=port)
-        print("Input: "+portname)
-        #midiin.set_callback(MidiInputHandler(portname))
-
-
-def set_midiout(port):
-    global midiout
-    if port != "None":
-        midiout.close_port()
-        #midiout, portname = open_midiport(port=port, type_="output")
-        midiout, portname = open_midioutput(port=port)
-        print("Output: "+portname)
-    if port == "None":
-        midiout.close_port()
-
-
-def upd_setting_0():
-    upd_settings_sub(0)
-
-
-def upd_setting_1():
-    upd_settings_sub(1)
-
-
-def upd_setting_2():
-    upd_settings_sub(2)
-
-
-def upd_setting_3():
-    upd_settings_sub(3)
+        g_vars.midiout.send_message([0])
 
 
 def clock_timer(self):
@@ -433,8 +381,8 @@ def clock_timer(self):
     if self.midi_clock_out is False:
         return None
 
-    if midiout.is_port_open() and scn is not None:
-        midiout.send_message([248])
+    if g_vars.midiout.is_port_open() and scn is not None:
+        g_vars.midiout.send_message([248])
 
         return delay
 
@@ -443,58 +391,6 @@ def send_clock(self, context):
     if self.midi_clock_out is True:
         bpy.app.timers.register(functools.partial(clock_timer, self))
     #bpy.app.timers.register(send_clock)
-
-
-class AddRoutes_RefreshDevices(bpy.types.Operator):
-    '''Refresh the list of MIDI devices'''
-    bl_idname = "addroutes.refresh_devices"
-    bl_label = "Refresh MIDI devices"
-
-    def upd_midiin(self, context):
-        set_midiin(context.window_manager.midi_in_device)
-        upd_setting_1()
-
-    def upd_midiout(self, context):
-        set_midiout(context.window_manager.midi_out_device)
-        upd_setting_2()
-
-    def refresh_midi_in_devices(self, context):
-        b = midi_in_list
-        return b
-
-    def refresh_midi_out_devices(self, context):
-        b = midi_out_list
-        return b
-
-    def refresh_devices(self):
-        global midi_in_list, midi_out_list, midiin, midiout
-
-        b = []
-        a = ("None", "None", "None")
-        b.append(a)
-        for i in midiin.get_ports():
-            a = (i, i, i)
-            b.append(a)
-        midi_in_list = b
-
-        b = []
-        a = ("None", "None", "None")
-        b.append(a)
-        for i in midiout.get_ports():
-            a = (i, i, i)
-            b.append(a)
-        midi_out_list = b
-
-    bpy.types.WindowManager.midi_in_device = bpy.props.EnumProperty(name="MIDI In Ports", items=refresh_midi_in_devices,
-                                                                    update=upd_midiin)
-    bpy.types.WindowManager.midi_out_device = bpy.props.EnumProperty(name="MIDI Out Ports",
-                                                                     items=refresh_midi_out_devices, update=upd_midiout)
-
-    refresh_devices(0) #trick to be able to call the function
-
-    def execute(self, context):
-        self.refresh_devices()
-        return{'FINISHED'}
 
 
 class AddRoutes_Open_Midifile(bpy.types.Operator, ImportHelper):
@@ -528,6 +424,7 @@ class AddRoutes_Midifile_Convert(bpy.types.Operator):
     def execute(self, context):
         global midifile_conv
         midifile_conv = True
+
         try:
             if context.scene.midifile[0] != "/":
                 context.scene.midifile = "//"+context.scene.midifile
@@ -535,7 +432,7 @@ class AddRoutes_Midifile_Convert(bpy.types.Operator):
             mid = MidiFile(current_file)
         except:
             midifile_conv = False
-            self.report({'INFO'}, "Midifile Error")
+            self.report({'INFO'}, "Midifile not found")
             return {'FINISHED'}
 
         beat_dur = 60 / context.scene.tempo
@@ -602,7 +499,7 @@ class AddRoutes_Midifile_Parse(bpy.types.Operator):
             current_file = bpy.path.abspath(context.scene.midifile)
             mid = MidiFile(current_file)
         except:
-            self.report({'INFO'}, "Midifile Error")
+            self.report({'INFO'}, "Midifile not found")
             return {'FINISHED'}
 
         beat_dur = 60 / context.scene.tempo
@@ -667,8 +564,8 @@ class AddRoutes_Midi_Play(bpy.types.Operator):
 
     def execute(self, context):
         global is_playing
-        if midiout.is_port_open():
-            midiout.send_message([250])
+        if g_vars.midiout.is_port_open():
+            g_vars.midiout.send_message([250])
             bpy.ops.screen.animation_cancel(restore_frame=False)
             bpy.ops.screen.frame_jump(end=False)
             bpy.ops.screen.animation_play(sync=True)
@@ -771,13 +668,13 @@ class AddRoutes_Midi_Pause(bpy.types.Operator):
 
     def execute(self, context):
         global is_playing
-        if midiout.is_port_open() and context.scene.midi_clock_out:
+        if g_vars.midiout.is_port_open() and context.scene.midi_clock_out:
             if is_playing is True:
-                midiout.send_message([252])
+                g_vars.midiout.send_message([252])
                 is_playing = False
                 bpy.ops.screen.animation_cancel(restore_frame=False)
             else:
-                midiout.send_message([251])
+                g_vars.midiout.send_message([251])
                 is_playing = True
                 bpy.ops.screen.animation_play(sync=True)
         return {'FINISHED'}
@@ -805,93 +702,95 @@ def midi_frame_upd(scn):
 
     # this is for SPP out
     new_frame = scn.frame_current
-    if scn.SPP_out and midiout.is_port_open():
+    if scn.SPP_out and g_vars.midiout.is_port_open():
         # for restarting while playing in loop mode OR when not playing
         if ((new_frame != prev_frame + 1) and is_playing) or is_playing is False:
             pos_sec = scn.frame_current / scn.render.fps
             beats = (pos_sec / 60) * scn.tempo * 4  # in fact 16th not beat, hence the "4"
             p2 = int(beats / 128)
             p1 = beats % 128
-            midiout.send_message([242, p1, p2])
+            g_vars.midiout.send_message([242, p1, p2])
     prev_frame = new_frame
 
     # send midi events
-    for bl_item, item in g_vars.addroutes_out:
-        # getting current value
-        if bl_item.is_str2eval:
-            g_vars.evalprop(bl_item.str2eval, bl_item.withctx)
-            prop = g_vars.eval_prop
-            ref = g_vars.eval_ref
-        else:
-            ref = item['ref']
-            prop = item['prop']
-
-        try:
-            if bl_item.is_array:
-                val = getattr(ref, prop)[bl_item.array]
+    if g_vars.midiout.is_port_open():
+        for bl_item, item in g_vars.addroutes_out:
+            # getting current value
+            if bl_item.is_str2eval:
+                g_vars.evalprop(bl_item.str2eval, bl_item.withctx)
+                prop = g_vars.eval_prop
+                ref = g_vars.eval_ref
             else:
-                val = getattr(ref, prop)
+                ref = item['ref']
+                prop = item['prop']
 
-            # apply func
-            func = item['func']
-            val = func(bl_item, item, val)
-
-            # testing rescale feature mode
-            scale = item['rescale_bl']
-            quant = item['quant']
-
-            if bl_item.rescale_mode == 'Direct':
-                val2 = int(clamp(0, val, quant))
-
-            if bl_item.rescale_mode == 'Auto':
-                val2 = rescale(val, 0, quant, scale)
-                val2 = int(clamp(0, val2, quant))
-
-            elif bl_item.rescale_mode == "Cut":
-                if val < bl_item.rescale_outside_low or val > bl_item.rescale_outside_high:
-                    return
+            try:
+                if bl_item.is_array:
+                    val = getattr(ref, prop)[bl_item.array]
                 else:
+                    val = getattr(ref, prop)
+
+                # apply func
+                func = item['func']
+                val = func(bl_item, item, val)
+
+                # testing rescale feature mode
+                scale = item['rescale_bl']
+                quant = item['quant']
+
+                if bl_item.rescale_mode == 'Direct':
+                    val2 = int(clamp(0, val, quant))
+
+                if bl_item.rescale_mode == 'Auto':
+                    val2 = rescale(val, 0, quant, scale)
+                    val2 = int(clamp(0, val2, quant))
+
+                elif bl_item.rescale_mode == "Cut":
+                    if val < bl_item.rescale_outside_low or val > bl_item.rescale_outside_high:
+                        return
+                    else:
+                        val2 = rescale(val, 0, quant, scale)
+                        val2 = int(clamp(bl_item.rescale_outside_low, val2, bl_item.rescale_outside_high))
+
+                elif bl_item.rescale_mode == 'Wrap':
                     val2 = rescale(val, 0, quant, scale)
                     val2 = int(clamp(bl_item.rescale_outside_low, val2, bl_item.rescale_outside_high))
 
-            elif bl_item.rescale_mode == 'Wrap':
-                val2 = rescale(val, 0, quant, scale)
-                val2 = int(clamp(bl_item.rescale_outside_low, val2, bl_item.rescale_outside_high))
+                # the value has changed
+                if val2 != item['val']:
+                    item['val'] = val2
 
-            # the value has changed
-            if val2 != item['val']:
-                item['val'] = val2
+                    # simple 7bit parameter like pgm change and mono AT
+                    if item['lenx'] == 1:
+                        g_vars.midiout.send_message([item['midi'], val2])
 
-                # simple 7bit parameter like pgm change and mono AT
-                if item['lenx'] == 1:
-                    midiout.send_message([item['midi'], val2])
+                    # others 2 bytes msg
+                    elif item['reg'] is None:
+                        # for poly AT, cc7
+                        if item['quant'] == 127:
+                            g_vars.midiout.send_message([item['midi'], item['filter'], val2])
+                        # for pitchbend
+                        else:
+                            LSB = val2 % 128
+                            MSB = int(val2 / 128)
+                            g_vars.midiout.send_message([item['midi'], LSB, MSB])
 
-                # others 2 bytes msg
-                elif item['reg'] is None:
-                    # for poly AT, cc7
-                    if item['quant'] == 127:
-                        midiout.send_message([item['midi'], item['filter'], val2])
-                    # for pitchbend
+                    # for rpn/nrpn 7bit and 14bit
                     else:
-                        LSB = val2 % 128
-                        MSB = int(val2 / 128)
-                        midiout.send_message([item['midi'], LSB, MSB])
+                        # 7bit
+                        if item['quant'] == 127:
+                            for msg in item['reg']:
+                                g_vars.midiout.send_message([item['midi'], msg[0], eval(msg[1])])
 
-                # for rpn/nrpn 7bit and 14bit
-                else:
-                    # 7bit
-                    if item['quant'] == 127:
-                        for msg in item['reg']:
-                            midiout.send_message([item['midi'], msg[0], eval(msg[1])])
-
-                    # 14bit msg
-                    else:
-                        LSB = val2 % 128
-                        MSB = int(val2 / 128)
-                        for msg in item['reg']:
-                            midiout.send_message([item['midi'], msg[0], eval(msg[1])])
-        except:
-            print("Error while sending, improper MIDI route #", item["n"], 'category :', bl_item.category)
+                        # 14bit msg
+                        else:
+                            LSB = val2 % 128
+                            MSB = int(val2 / 128)
+                            for msg in item['reg']:
+                                g_vars.midiout.send_message([item['midi'], msg[0], eval(msg[1])])
+            except:
+                if bpy.context.window_manager.addroutes_midi_debug is True:
+                    print("Error while sending, improper MIDI route #", item["n"], 'category :', bl_item.category)
 
 
 @persistent
@@ -921,7 +820,6 @@ def addroutes_midi_off(scene):
 
 
 cls = (
-    AddRoutes_RefreshDevices,
     AddRoutes_Midifile_Convert,
     AddRoutes_Open_Midifile,
     AddRoutes_Midifile_Parse,
@@ -933,8 +831,6 @@ cls = (
 
 def register():
     bpy.types.WindowManager.n_overflow = bpy.props.IntProperty(description="Overflow events")
-    bpy.types.WindowManager.addroutes_midi_debug = bpy.props.BoolProperty(
-        description='Debug incoming MIDI messages in console. Warning : Can be slow !')
     bpy.types.Scene.sync = bpy.props.BoolProperty(name='Midi Clock in')
     bpy.types.Scene.SPP = bpy.props.BoolProperty(name='SPP in')
     bpy.types.Scene.midi_clock_out = bpy.props.BoolProperty(name='Midi Clock out', update=send_clock)
@@ -963,7 +859,6 @@ def register():
 
 def unregister():
     del bpy.types.WindowManager.n_overflow
-    del bpy.types.WindowManager.addroutes_midi_debug
     del bpy.types.Scene.off_to_0
     del bpy.types.Scene.mf_play
     del bpy.types.Scene.mf_render
@@ -975,12 +870,12 @@ def unregister():
     del bpy.types.Scene.midi_clock_out
     del bpy.types.Scene.SPP
     del bpy.types.Scene.sync
-    del bpy.types.WindowManager.midi_out_device
-    del bpy.types.WindowManager.midi_in_device
+
     bpy.app.timers.unregister(actua_timer)
     bpy.app.handlers.frame_change_pre.remove(midi_frame_upd)
     bpy.app.handlers.load_post.remove(addroutes_midi_on)
     bpy.app.handlers.load_pre.remove(addroutes_midi_off)
+
     for c in cls:
         unregister_class(c)
 

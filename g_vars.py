@@ -19,12 +19,26 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import rtmidi
+# Creation of two MIDI ports
+midiin = rtmidi.MidiIn()
+midiout = rtmidi.MidiOut()
+
+# for inhibiting saving
+save_inh = False
+midi_update_inh = False
 
 # just to have a global namespace
 last_osc_addr = None
 blemote_midi_fb = []
 osc_queue = []
 blemote_fb = []
+
+# OSC
+osc_out_enable = False
+osc_in_enable = False
+osc_client = None
+
 
 
 addroutes_in = None
