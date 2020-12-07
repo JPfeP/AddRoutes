@@ -170,7 +170,8 @@ def set_props(item, bl_item, val):
 
     if bl_item.is_array:
         current = getattr(ref, prop)[bl_item.array]
-        getattr(ref, prop)[bl_item.array] = post_func(current, result, bl_item)
+        result2 = post_func(current, result, bl_item)
+        getattr(ref, prop)[bl_item.array] = result2
     else:
         current = getattr(ref, prop)
         result2 = post_func(current, result, bl_item)
@@ -184,6 +185,8 @@ def set_props(item, bl_item, val):
         else:
             ref.keyframe_insert(data_path=prop, **item['ks_params'], **mf_frame)
 
+    return result2
+
 
 def actualise(scn, msg):
     chan = str(msg[0])
@@ -196,7 +199,7 @@ def actualise(scn, msg):
 
     if bpy.context.window_manager.addroutes_midi_debug is True:
         debug = None
-        print("\nMIDI - Receiving on channel:", chan, ", event:", cont, ", payload:", msg[2:])
+        debug_msg = "MIDI - Receiving on channel: " + chan + ", event: " + cont + ", payload:" + str(msg[2:])
 
     for n, bl_item, dico_arr in toexec:
         # getting index and a ref for the blender item
@@ -208,7 +211,7 @@ def actualise(scn, msg):
                 dico = dico_arr.get(str(msg[2]))
                 if dico is not None:
                     val = msg[3]
-                    set_props(dico, bl_item, val)
+                    result2 = set_props(dico, bl_item, val)
             elif bl_item.filter is False:
                 dico = list(dico_arr.values())[0]
                 idx = 1
@@ -216,22 +219,26 @@ def actualise(scn, msg):
                 if dico['option'] == '':
                     idx = 0
                 val = msg[2+idx]
-                set_props(dico, bl_item, val)
+                result2 = set_props(dico, bl_item, val)
 
             if bpy.context.window_manager.addroutes_midi_debug is True:
                 if dico is not None:
-                    print("---> OK route #"+str(n), ", category: "+bl_item.category, ", updating with: ", val)
+                    debug_msg += "\n---> OK route n°"+str(n)+", category: " + bl_item.category+", updating property to :" + str(result2) + " using:" + str(val)
+                    bpy.ops.addroutes.debuginfo(msg=debug_msg)
                 else:
-                    print("---> OK route #"+str(n), ", category: "+bl_item.category, "... but filtered out")
+                    debug_msg += "\n---> OK route n°"+str(n)+", category: "+bl_item.category+"... but filtered out"
+                    bpy.ops.addroutes.debuginfo(msg=debug_msg)
                 debug = True
         except:
             if bpy.context.window_manager.addroutes_midi_debug is True:
-                print("... but something went wrong with route #"+str(n), ", category: "+bl_item.category)
+                debug_msg += "\n... but something went wrong with route n°"+str(n)+", category: "+bl_item.category
+                bpy.ops.addroutes.debuginfo(msg=debug_msg)
                 debug = True
 
     if bpy.context.window_manager.addroutes_midi_debug is True:
         if debug is None:
-            print("... but no matching route")
+            debug_msg += "\n... but no matching route"
+            bpy.ops.addroutes.debuginfo(msg=debug_msg)
 
 
 def seq_do(scn, do):
@@ -788,9 +795,13 @@ def midi_frame_upd(scn):
                             MSB = int(val2 / 128)
                             for msg in item['reg']:
                                 g_vars.midiout.send_message([item['midi'], msg[0], eval(msg[1])])
+
+                    if bpy.context.window_manager.addroutes_midi_debug is True:
+                        bpy.ops.addroutes.debuginfo(msg="MIDI: Sending OK, route n°" + str(item["n"]) + ", category : " + bl_item.category + ", value: " + str(val2))
+
             except:
                 if bpy.context.window_manager.addroutes_midi_debug is True:
-                    print("Error while sending, improper MIDI route #", item["n"], 'category :', bl_item.category)
+                    bpy.ops.addroutes.debuginfo(msg="MIDI: Sending error, improper route n°" + str(item["n"]) + ', category :' + bl_item.category)
 
 
 @persistent
@@ -815,8 +826,6 @@ def addroutes_midi_on(scene):
 def addroutes_midi_off(scene):
     bpy.app.timers.unregister(get_ctx_scene)
     print('AddRoutes OFF')
-
-
 
 
 cls = (

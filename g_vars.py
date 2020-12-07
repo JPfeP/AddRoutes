@@ -68,6 +68,16 @@ def get_item(i, j):
         return bpy.context.preferences.addons['AddRoutes'].preferences.AddR_System_Routes[i]
 
 
+def debugcopy(self, context):
+    prefs = bpy.context.preferences.addons['AddRoutes'].preferences
+    text = bpy.data.texts.get("AddRoutes: Debug in/out")
+    if text is None and prefs.debug_copy:
+        bpy.ops.text.new()
+        text = bpy.data.texts[-1]
+        text.name = 'AddRoutes: Debug in/out'
+    return
+
+
 Cont_types = [
             ('key_on', 'Key On number', ''),
             ('key_off', 'Key Off number', ''),

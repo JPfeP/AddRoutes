@@ -22,11 +22,11 @@
 bl_info = {
     "name": "AddRoutes",
     "author": "JPfeP",
-    "version": (0, 30),
+    "version": (0, 31),
     "blender": (2, 80, 0),
     "location": "",
-    "description": "Realtime MIDI, OSC protocols in the viewport",
-    "warning": "Still a W.I.P",
+    "description": "Realtime interactions with Blender (MIDI, OSC, smartphone App)",
+    "warning": "Better, but still a W.I.P",
     "wiki_url": "http://www.jpfep.net/pages/addons/addroutes/",
     "tracker_url": "",
     "category": "System"}
@@ -253,6 +253,7 @@ class AddonPreferences(AddonPreferences):
         name="Automatic output configuration",
         default=True
     )
+
     refresh: IntProperty(
         name="Refresh rate of engines (ms)",
         default=1,
@@ -309,6 +310,13 @@ class AddonPreferences(AddonPreferences):
         description='The output network port (0-65535)'
     )
 
+    debug_copy: BoolProperty(
+        description="Copy debug messages in the text editor (text file name: 'AddRoutes: Debug in/out')"
+    )
+    debug_timestamp: BoolProperty(
+        description="Add a time stamp to each debug message"
+    )
+
     def draw(self, context):
         layout = self.layout
         box = layout.box()
@@ -316,11 +324,17 @@ class AddonPreferences(AddonPreferences):
         col = box.column(align=True)
         col.prop(self, "refresh")
         col.prop(self, "overflow")
+        box.label(text="Debug Settings:")
+        col = box.column(align=True)
+        col.prop(self, "debug_copy", text='Copy all in/out debug messages in the text editor')
+        col.prop(self, "debug_timestamp", text='Add time stamp to debug messages')
 
         box = layout.box()
         box.label(text="Blemote Settings:")
-        box.prop(self, "blemote_enable")
-        box.prop(self, "blemote_autoconf")
+        col = box.column(align=True)
+        col.prop(self, "blemote_enable")
+        col.prop(self, "blemote_autoconf")
+
         col = box.column(align=True)
         row = col.row(align=True)
         row.alert = bpy.context.window_manager.addroutes_blemote_alert and self.blemote_enable

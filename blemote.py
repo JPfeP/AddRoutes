@@ -26,6 +26,8 @@ from oscpy.server import OSCThreadServer
 from oscpy.client import OSCClient
 import time
 
+import ifaddr
+
 from . import g_vars
 from .load_save import save_settings
 
@@ -56,7 +58,8 @@ def actua_bl():
             bl_item = msg[0]
             item = msg[1]
             val = float(msg[2])
-       
+            n = msg[3]
+
             func = item['func']
             post_func = item['post_func']
 
@@ -74,7 +77,8 @@ def actua_bl():
 
                 if bl_item.is_array:
                     current = getattr(ref, prop)[bl_item.array]
-                    getattr(ref, prop)[bl_item.array] = post_func(current, result, bl_item)
+                    result2 = post_func(current, result, bl_item)
+                    getattr(ref, prop)[bl_item.array] = result2
                 else:
                     current = getattr(ref, prop)
                     result2 = post_func(current, result, bl_item)
@@ -88,8 +92,13 @@ def actua_bl():
                     else:
                         ref.keyframe_insert(data_path=prop, **item['ks_params'])
 
+                if bpy.context.window_manager.addroutes_blemote_debug:
+                    debug_msg = "Blemote: OK route n°" + str(n) + ", category: " + bl_item.category + ", updating to:" + str(result2) + ", using:" + str(val)
+                    bpy.ops.addroutes.debuginfo(msg=debug_msg)
+
             except:
-                print("Error while receiving, improper Blemote route parameters with: " + repr(bl_item))
+                if bpy.context.window_manager.addroutes_blemote_debug:
+                    bpy.ops.addroutes.debuginfo(msg="Blemote: Update error, improper route n°" + str(n) + ", category: " + bl_item.category)
 
     return prefs.refresh/1000
 
@@ -116,6 +125,7 @@ def Blemote_callback(*args):
         if route_blemote is None:
             return
         dico = route_blemote[2]
+        n = route_blemote[1]
         item = route_blemote[0]
         if dico['engine'] == 'MIDI':
             chan = dico['trigger']['channel']
@@ -128,7 +138,7 @@ def Blemote_callback(*args):
             #print(dico['trigger'], args[1])
 
         elif dico['engine'] == 'Blemote':
-            g_vars.blemote_fb.append([item, dico['trigger'], args[2]])
+            g_vars.blemote_fb.append([item, dico['trigger'], args[2], n])
 
     elif addr == '/ping':
         #print(blem_server.get_sender())
@@ -197,10 +207,6 @@ def retry_server():
     return 1
 
 
-cls = (#AddRoutes_Refresh_Blemote,
-       )
-
-
 def blemote_poll():
     global auto_port_out, auto_udp_out, stored, upd_cnt, blem_cnt
     pref = bpy.context.preferences.addons['AddRoutes'].preferences
@@ -254,7 +260,35 @@ def blemote_poll():
     return 2
 
 
+class AddRoutes_ShowBlenderIP(bpy.types.Operator):
+    """Show in the INFO window the possible Blender IP's to fill in the Blemote App Destination"""
+    bl_idname = "addroutes.showblenderip"
+    bl_label = "Show the IPs of Blender"
+
+    def execute(self, context):
+        adapters = ifaddr.get_adapters()
+
+        for adapter in adapters:
+            if adapter.nice_name != "lo":
+                str_adapter = "IP of network adapter " + adapter.nice_name
+                ip = adapter.ips[0]
+                ip_data = str(ip.ip)
+                self.report({'INFO'}, str_adapter + " : " + ip_data)
+
+        return{'FINISHED'}
+
+
+cls = (AddRoutes_ShowBlenderIP,
+       )
+
+
 def register():
+    bpy.types.WindowManager.addroutes_blemote_debug = bpy.props.BoolProperty(
+        name="Debug Blemote",
+        default=False,
+        description="Debug Blemote incoming messages"
+    )
+
     bpy.types.WindowManager.addroutes_blemote_udp_in = bpy.props.StringProperty(
         default="0.0.0.0",
         update=save_blemote_addr_in,
@@ -288,6 +322,7 @@ def register():
 
 
 def unregister():
+    del bpy.types.WindowManager.addroutes_blemote_debug
     del bpy.types.WindowManager.addroutes_blemote_alert
     del bpy.types.WindowManager.addroutes_blemote_port_out
     del bpy.types.WindowManager.addroutes_blemote_port_in

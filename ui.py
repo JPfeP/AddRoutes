@@ -26,6 +26,7 @@ from bpy.types import Menu
 from bpy_extras.io_utils import ImportHelper
 
 import json
+import time
 
 from . import g_vars
 from .data import generate_dict
@@ -65,7 +66,9 @@ class VIEW3D_PT_AddRoutes_MIDI_Config(Panel):
 
         row = box.row()
         row.prop(context.scene, 'off_to_0', text='Convert notes off')
-        row.prop(context.scene, 'tempo')
+
+        box = layout.box()
+        box.label(text="Synchronization:")
 
         row = box.row(align=True)
         row.prop(context.scene, 'sync')
@@ -79,6 +82,8 @@ class VIEW3D_PT_AddRoutes_MIDI_Config(Panel):
         row.operator('addroutes.midiplay', text='Play', icon='PLAY')
         row.operator('addroutes.midicont', text='Pause', icon='PAUSE')
         #row.operator('addroutes.midistop', text='Stop', icon='MATPLANE')
+        row = box.row()
+        row.prop(context.scene, 'tempo')
 
         box = layout.box()
         box.label(text="Midifile settings:")
@@ -190,6 +195,10 @@ class VIEW3D_PT_AddRoutes_Blemote_Config(Panel):
         row.prop(prefs, "blemote_port_out")
         row.active = not (prefs.blemote_autoconf)
         box.operator('wm.save_userpref')
+
+        box = layout.box()
+        box.prop(bpy.context.window_manager, 'addroutes_blemote_debug')
+        box.operator('addroutes.showblenderip')
 
 
 class VIEW3D_PT_AddRoutes_Tools(Panel):
@@ -910,6 +919,29 @@ class AddRoutes_OscPick(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class AddRoutes_DebugInfo(bpy.types.Operator):
+    """Copy debug messages in Info window"""
+    bl_idname = "addroutes.debuginfo"
+    bl_label = "Copy Debug in Info window"
+
+    msg: bpy.props.StringProperty()
+
+    def execute(self, context):
+        g_vars.debugcopy(self, context)
+        prefs = bpy.context.preferences.addons['AddRoutes'].preferences
+        text = bpy.data.texts.get("AddRoutes: Debug in/out")
+        text.cursor_set(line=0)
+        if prefs.debug_timestamp:
+            msg = time.strftime("%H:%M:%S", time.localtime()) + ': ' + self.msg
+        else:
+            msg = self.msg
+        if prefs.debug_copy:
+            text.write(msg+'\n\n')
+        print(msg+'\n\n')
+        #self.report({'INFO'}, self.msg)
+        return {'FINISHED'}
+
+
 def menu_func(self, context):
     layout = self.layout
     layout.separator()
@@ -928,6 +960,7 @@ cls = ( AddRoutes_AddProp,
         AddRoutes_Category_Export,
         AddRoutes_Category_Import,
         AddRoutes_OscPick,
+        AddRoutes_DebugInfo,
         VIEW3D_PT_AddRoutes_MIDI_Config,
         VIEW3D_PT_AddRoutes_OSC_Config,
         VIEW3D_PT_AddRoutes_Blemote_Config,

@@ -46,6 +46,7 @@ def save_settings(self, context):
             'addroutes_osc_debug',
 
             # Blemote
+            'addroutes_blemote_debug',
             #'bpy.context.window_manager.addroutes_blemote_udp_in',
             #'bpy.context.window_manager.addroutes_blemote_port_in',
             #'bpy.context.window_manager.addroutes_blemote_udp_out',

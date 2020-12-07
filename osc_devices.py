@@ -198,7 +198,8 @@ def register():
     bpy.types.WindowManager.addroutes_osc_in_alert = bpy.props.BoolProperty()
     bpy.types.WindowManager.addroutes_osc_out_alert = bpy.props.BoolProperty()
     bpy.types.WindowManager.addroutes_osc_debug = bpy.props.BoolProperty(
-        description='Debug OSC messages in console. Warning: Can be slow !'
+        description='Debug in/out OSC messages. Warning: Can be slow !',
+        update=g_vars.debugcopy
     )
     bpy.types.WindowManager.addroutes_osc_in_enable = bpy.props.BoolProperty(update=update_osc_in_enable,
                                                                              description='Enable OSC Input')

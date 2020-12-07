@@ -59,7 +59,8 @@ def set_props(item, bl_item, val):
 
     if bl_item.is_array and (bl_item.use_array is False):
         current = getattr(ref, prop)[bl_item.array]
-        getattr(ref, prop)[bl_item.array] = post_func(current, result, bl_item)
+        result2 = post_func(current, result, bl_item)
+        getattr(ref, prop)[bl_item.array] = result2
     else:
         current = getattr(ref, prop)
         result2 = post_func(current, result, bl_item)
@@ -72,6 +73,8 @@ def set_props(item, bl_item, val):
             ref.keyframe_insert(data_path=prop, index=index, **item['ks_params'], **qf_frame)
         else:
             ref.keyframe_insert(data_path=prop, **item['ks_params'], **qf_frame)
+
+    return result2
 
 
 def actua_osc_timer():
@@ -107,7 +110,7 @@ def actua_osc(msg):
 
     if bpy.context.window_manager.addroutes_osc_debug:
         debug_flag = False
-        print("\nOSC - Receiving:", msg)
+        debug_msg = "OSC - Receiving:"+str(msg)
 
     for n, bl_item, dico_arr in g_vars.addroutes_osc_in.get(addr, []):
         try:
@@ -118,28 +121,32 @@ def actua_osc(msg):
             if bl_item.is_multi is True:
                 dico = dico_arr.get(str(int(multi_idx)))
                 if dico is not None:
-                    set_props(dico, bl_item, val2)
+                    result2 = set_props(dico, bl_item, val2)
                 # debug in console
                 if bpy.context.window_manager.addroutes_osc_debug is True:
-                    print("---> OK route #"+str(n), ", category: "+bl_item.category, ", updating with:", val2)
+                    debug_msg += "\n---> OK route n°" + str(n) + ", category: " + bl_item.category + ", updating property to :" + str(result2) + " using:" + str(val2)
+                    bpy.ops.addroutes.debuginfo(msg=debug_msg)
                     debug_flag = True
             elif bl_item.is_multi is False:
                 dico = dico_arr["0"]
-                set_props(dico, bl_item, val2)
+                result2 = set_props(dico, bl_item, val2)
                 # debug in console
                 if bpy.context.window_manager.addroutes_osc_debug is True:
-                    print("---> OK route #"+str(n), ", category: "+bl_item.category, ", updating with:", val2)
+                    debug_msg += "\n---> OK route n°" + str(n) + ", category: " + bl_item.category + ", updating property to :" + str(result2) + " using:" + str(val2)
+                    bpy.ops.addroutes.debuginfo(msg=debug_msg)
                     debug_flag = True
 
         except:
             #print("Unexpected error:", sys.exc_info()[0])
             if bpy.context.window_manager.addroutes_osc_debug is True:
-                print("---> ERROR with route #"+str(n), ", category: "+bl_item.category)
+                debug_msg += "\n---> but something went wrong with route n°" + str(n) + ", category: " + bl_item.category
+                bpy.ops.addroutes.debuginfo(msg=debug_msg)
                 debug_flag = True
 
     # if no route has triggered a debug_flag
     if bpy.context.window_manager.addroutes_osc_debug is True and debug_flag is False:
-        print("... but no matching route")
+        debug_msg += "\n... but no matching route"
+        bpy.ops.addroutes.debuginfo(msg=debug_msg)
 
 
 class AddRoutes_Qlist_Open(bpy.types.Operator, ImportHelper):
@@ -388,9 +395,13 @@ def osc_frame_upd(scn):
                     addr = str.encode(item['address'])
                     g_vars.osc_client.send_message(addr, val3)
 
+                    if bpy.context.window_manager.addroutes_osc_debug:
+                        bpy.ops.addroutes.debuginfo(msg="OSC: Sending OK, route n°" + str(
+                            item["n"]) + ', category :' + bl_item.category + ", value: " +str(val3))
+
             except:
                 if bpy.context.window_manager.addroutes_osc_debug:
-                    print("Error while sending, improper OSC route #", item["n"], 'category :', bl_item.category)
+                    bpy.ops.addroutes.debuginfo(msg="OSC: Sending Error, improper OSC route n°"+str(item["n"])+', category :'+bl_item.category)
                     #    print('OSC Sending - route #', item['n'], addr, val2)
 
 

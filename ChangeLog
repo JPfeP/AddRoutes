@@ -1,3 +1,7 @@
+v0.31
+    -New debug in/out messages feature in the text editor
+    -feature to show the Blender machine IP's.
+
 v0.30
     -Routes can be collapsed/expanded
     -Fix for python imports (using now absolute path)

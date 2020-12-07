@@ -266,7 +266,8 @@ def register():
     bpy.types.WindowManager.addroutes_midi_in_alert = bpy.props.BoolProperty()
     bpy.types.WindowManager.addroutes_midi_out_alert = bpy.props.BoolProperty()
     bpy.types.WindowManager.addroutes_midi_debug = bpy.props.BoolProperty(
-        description='Debug MIDI messages in console. Warning : Can be slow !'
+        description='Debug in/out MIDI messages. Warning : Can be slow !',
+        update=g_vars.debugcopy
     )
 
     for c in cls:
