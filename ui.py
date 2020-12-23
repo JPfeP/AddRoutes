@@ -235,6 +235,7 @@ class VIEW3D_PT_AddRoutes_Tools(Panel):
         box.label(text="Extra route parameters:")
         box.prop(context.scene, 'show_postprocess')
         box.prop(context.scene, 'show_categories')
+        box.prop(context.scene, 'addroutes_show_name_setting')
 
         #box.prop(context.scene, 'show_routes_number')
 
@@ -265,17 +266,27 @@ def show_routes(context, layout, item, i, route_type):
         row.prop(item, "show_expanded", text="", icon='DISCLOSURE_TRI_RIGHT', emboss=False)
 
     if route_type == 'NORMAL':
-        row.label(text='Route #' + str(i) + "       ")
+        if item.route_name == "":
+            row.label(text='Route #' + str(i) + "       ")
+        else:
+            row.label(text=item.route_name)
         row.operator("addroutes.copyprop", icon='ADD', text='').n = i
         row.operator("addroutes.removeprop", icon='PANEL_CLOSE', text='').n = i
     else:
-        row.label(text='Route S' + str(i) + "       ")
+        if item.route_name == "":
+            row.label(text='Route S' + str(i) + "       ")
+        else:
+            row.label(text=item.route_name)
         row.operator("addroutes.copysysprop", icon='ADD', text='').n = i
         row.operator("addroutes.remsysroute", icon='PANEL_CLOSE', text='').n = i
 
-    if context.scene.show_categories and route_type != 'SYSTEM':
-        row = box.row()
-        row.prop(item, 'category')
+    if item.show_expanded:
+        col = box.column(align=True)
+        if context.scene.show_categories and route_type != 'SYSTEM':
+            col.prop(item, 'category')
+
+        if context.scene.addroutes_show_name_setting:
+            col.prop(item, 'route_name')
 
     # Section 2 - Properties
     if item.show_expanded:
@@ -929,16 +940,18 @@ class AddRoutes_DebugInfo(bpy.types.Operator):
     def execute(self, context):
         g_vars.debugcopy(self, context)
         prefs = bpy.context.preferences.addons['AddRoutes'].preferences
-        text = bpy.data.texts.get("AddRoutes: Debug in/out")
-        text.cursor_set(line=0)
+
         if prefs.debug_timestamp:
             msg = time.strftime("%H:%M:%S", time.localtime()) + ': ' + self.msg
         else:
             msg = self.msg
         if prefs.debug_copy:
-            text.write(msg+'\n\n')
+            text = bpy.data.texts.get("AddRoutes: Debug in/out")
+            if text is not None:
+                text.cursor_set(line=0)
+                text.write(msg+'\n\n')
         print(msg+'\n\n')
-        #self.report({'INFO'}, self.msg)
+
         return {'FINISHED'}
 
 

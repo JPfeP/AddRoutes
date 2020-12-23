@@ -1,6 +1,11 @@
+V0.32
+    -Routes can now be named
+    -Fix bad initialisations of global variables for Blemote and MIDI (could silently crash engines while starting new projects)
+    -Fix a nasty bug in the recently improved debug feature (was fatal too)
+
 v0.31
     -New debug in/out messages feature in the text editor
-    -feature to show the Blender machine IP's.
+    -Feature to show the Blender machine IP's.
 
 v0.30
     -Routes can be collapsed/expanded

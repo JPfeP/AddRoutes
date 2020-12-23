@@ -1,0 +1,12 @@
+New features:
+Support custom prop
+
+New engines:
+    -Firmata
+    -Game devices
+    -DMX
+
+Nodal injector
+
+Improvements:
+-appropriate polling function for "create realtime route"

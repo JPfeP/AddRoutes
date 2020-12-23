@@ -22,7 +22,7 @@
 bl_info = {
     "name": "AddRoutes",
     "author": "JPfeP",
-    "version": (0, 31),
+    "version": (0, 32),
     "blender": (2, 80, 0),
     "location": "",
     "description": "Realtime interactions with Blender (MIDI, OSC, smartphone App)",
@@ -50,6 +50,7 @@ if "bpy" in locals():
     importlib.reload(osc_devices)
     importlib.reload(osc)
     importlib.reload(blemote)
+    importlib.reload(blemote_devices)
 
 else:
     from . import data
@@ -60,6 +61,7 @@ else:
     from . import osc_devices
     from . import osc
     from . import blemote
+    from . import blemote_devices
 
 
 import bpy
@@ -187,6 +189,7 @@ class AddR_Items_PG(bpy.types.PropertyGroup):
     blem_max: bpy.props.FloatProperty(name='Max', default=100, update=generate_dict)
     blem_step: bpy.props.FloatProperty(name='Step', min=0, description='Minimal interval (0 = None)',
                                        update=generate_dict)
+    route_name: bpy.props.StringProperty(name='Route Name', description='Name of the route', update=generate_dict)
 
     # for multi routes
     is_multi: bpy.props.BoolProperty(name='Multi routing', update=generate_dict)
@@ -386,6 +389,7 @@ def register():
     midi.register()
     osc_devices.register()
     osc.register()
+    blemote_devices.register()
     blemote.register()
 
     for c in cls:
@@ -401,6 +405,7 @@ def unregister():
     data.unregister()
     load_save.unregister()
     blemote.unregister()
+    blemote_devices.unregister()
 
     for c in cls:
         unregister_class(c)

@@ -39,11 +39,9 @@ osc_out_enable = False
 osc_in_enable = False
 osc_client = None
 
-
-
-addroutes_in = None
+addroutes_in = {}
 addroutes_osc_in = []
-addroutes_blemote = []
+addroutes_blemote = {}
 
 eval_ref = None
 eval_prop = None

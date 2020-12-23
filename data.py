@@ -695,6 +695,7 @@ class MOM_Items_PG(bpy.types.PropertyGroup):
     blem_min: bpy.props.FloatProperty(name='Min', default=0, update=generate_dict)
     blem_max: bpy.props.FloatProperty(name='Max', default=100, update=generate_dict)
     blem_step: bpy.props.FloatProperty(name='Step', min=0, description='Minimal interval (0 = None)', update=generate_dict)
+    route_name: bpy.props.StringProperty(name='Route Name', description='Name of the route', update=generate_dict)
 
     # for multi routes
     is_multi: bpy.props.BoolProperty(name='Multi routing', update=generate_dict)
@@ -775,6 +776,7 @@ def register():
     bpy.types.Scene.MOM_Items = bpy.props.CollectionProperty(type=MOM_Items_PG)
     bpy.types.Scene.show_postprocess = bpy.props.BoolProperty(name="Show envelope settings ")
     bpy.types.Scene.show_categories = bpy.props.BoolProperty(name="Show categories")
+    bpy.types.Scene.addroutes_show_name_setting = bpy.props.BoolProperty(name="Show name setting")
     bpy.types.Scene.show_routes_number = bpy.props.BoolProperty(name="Show routes number")
     bpy.types.Scene.MOM_sorting = bpy.props.EnumProperty(
         name='Sorting',
@@ -791,6 +793,7 @@ def unregister():
     del bpy.types.Scene.MOM_sorting
     del bpy.types.Scene.show_routes_number
     del bpy.types.Scene.show_categories
+    del bpy.types.Scene.addroutes_show_name_setting
     del bpy.types.Scene.show_postprocess
     del bpy.types.Scene.MOM_Items
     for c in cls:
