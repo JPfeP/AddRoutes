@@ -1,5 +1,5 @@
 # AddRoutes
-A Blender 2.8 Add-on allowing MIDI, OSC and a remote Android App to control Blender 2.8/2.9 
+A Blender Add-on allowing MIDI, OSC and a remote Android App to control Blender 2.8/2.9/3.0
 
 If you are a user, see the Download section here to get a ready-to-go file : http://www.jpfep.net/pages/addroutes/
 
